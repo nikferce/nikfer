@@ -15,7 +15,7 @@ const STATIC_ASSETS = [
   './db.js',
   './config.js',
   './manifest.json',
-  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/tabler-icons.min.css',
+  'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
 ];
 
