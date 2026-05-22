@@ -3,20 +3,18 @@
 // Strateji: Cache-first (statik), Network-first (API/Supabase)
 // ============================================================
 
-const APP_VERSION   = 'v1.0.0';
+// ⚠️ Her değişiklikten sonra bu versiyonu artırın
+// ya da tarih damgası kullanın — eski cache otomatik silinir
+const APP_VERSION   = `v1.0.0-${new Date('2025-05-22').getTime()}`;
 const CACHE_STATIC  = `nikfer-static-${APP_VERSION}`;
 const CACHE_DYNAMIC = `nikfer-dynamic-${APP_VERSION}`;
 
 // Kurulumda önbelleğe alınacak statik dosyalar
+// ÖNEMLİ: index.html ve admin.html kasıtlı olarak ÇIKARILDI
+// Bu dosyalar her zaman network'ten gelsin, eski cache görünmesin
 const STATIC_ASSETS = [
-  './',
-  './index.html',
-  './admin.html',
-  './db.js',
-  './config.js',
   './manifest.json',
   'https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm',
 ];
 
 // ── INSTALL ──────────────────────────────────────────────────
@@ -47,19 +45,30 @@ self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Supabase API istekleri → Network-first (canlı veri önemli)
+  // Supabase API → Network-first (canlı veri önemli)
   if (url.hostname.includes('supabase.co')) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  // CDN kaynakları → Cache-first
-  if (url.hostname.includes('jsdelivr.net')) {
+  // CDN kaynakları → Cache-first (değişmez)
+  if (url.hostname.includes('jsdelivr.net') || url.hostname.includes('quilljs.com')) {
     event.respondWith(cacheFirst(request, CACHE_STATIC));
     return;
   }
 
-  // Statik uygulama dosyaları → Cache-first
+  // HTML ve JS dosyaları → Network-first (her zaman güncel)
+  if (request.method === 'GET' && (
+    url.pathname.endsWith('.html') ||
+    url.pathname.endsWith('.js')   ||
+    url.pathname.endsWith('.json') ||
+    url.pathname === '/'
+  )) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Görseller, ikonlar → Cache-first
   if (request.method === 'GET') {
     event.respondWith(cacheFirst(request, CACHE_DYNAMIC));
     return;
