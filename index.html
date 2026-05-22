@@ -46,14 +46,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 /* HERO */
-.hero{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);border-radius:var(--radius);overflow:hidden;margin-bottom:14px;position:relative}
-.hero-img{width:100%;height:180px;object-fit:cover;object-position:center 30%;display:block;filter:brightness(.75) sepia(.2)}
-.hero-content{padding:18px 18px 20px;position:relative}
-.hero-content::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M20 20h20v20H20zM0 0h20v20H0z'/%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
+.hero{border-radius:var(--radius);overflow:hidden;margin-bottom:14px;position:relative;min-height:200px;display:flex;align-items:flex-end}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;display:block}
+/* Altta koyu gradyan — metni okunabilir kılar */
+.hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom, rgba(44,26,10,.15) 0%, rgba(44,26,10,.55) 55%, rgba(44,26,10,.88) 100%);border-radius:var(--radius)}
+.hero-content{position:relative;z-index:2;padding:20px 18px 18px;width:100%}
 .hero-badge{display:inline-block;background:var(--accent);color:var(--primary-dark);font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:8px}
-.hero h2{color:#FFF;font-size:21px;font-weight:700;margin-bottom:5px}
-.hero p{color:rgba(255,255,255,.8);font-size:12px;line-height:1.6}
-.hero-caption{position:absolute;bottom:0;right:0;background:rgba(0,0,0,.45);color:rgba(255,255,255,.8);font-size:9px;padding:3px 8px;border-radius:6px 0 0 0}
+.hero h2{color:#FFF;font-size:22px;font-weight:700;margin-bottom:5px;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+.hero p{color:rgba(255,255,255,.88);font-size:12px;line-height:1.6;text-shadow:0 1px 3px rgba(0,0,0,.3)}
+.hero-caption{position:absolute;top:10px;right:10px;z-index:3;background:rgba(0,0,0,.4);color:rgba(255,255,255,.75);font-size:9px;padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px)}
 
 /* STATS */
 .stats-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
@@ -225,13 +226,13 @@ textarea.form-input{resize:none;min-height:72px}
         src="https://raw.githubusercontent.com/nikferce/nikfer/main/Nikfer_EskiOkulu_1928.png"
         alt="Nikfer Eski Okulu 1928"
         loading="eager"
-        onerror="this.style.display='none'"
+        onerror="this.style.display='none';this.parentElement.style.background='linear-gradient(135deg,#8B4513,#A0522D)'"
       >
+      <div class="hero-caption">Nikfer Eski Okulu · 1928</div>
       <div class="hero-content">
         <div class="hero-badge">📍 Denizli · Tavas · Nikfer</div>
         <h2>Nikfer Belleği</h2>
         <p>Kasabamızın tarihi, kültürü ve insanları — dijital arşivde yaşıyor.</p>
-        <div class="hero-caption">Nikfer Eski Okulu · 1928</div>
       </div>
     </div>
     <div class="stats-row">
