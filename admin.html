@@ -216,7 +216,7 @@ select.form-control{cursor:pointer}
       <div class="card">
         <div class="tbl-wrap">
           <table class="data-table">
-            <thead><tr><th>#</th><th>Başlık</th><th>Slug</th><th>Görünürlük</th><th>İşlem</th></tr></thead>
+            <thead><tr><th style="width:40px">#</th><th>Başlık</th><th>Slug</th><th style="width:90px">Görünürlük</th><th style="width:200px">İşlem</th></tr></thead>
             <tbody id="sections-tbody"><tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr></tbody>
           </table>
         </div>
@@ -644,20 +644,89 @@ async function loadSections() {
   const tbody = document.getElementById('sections-tbody');
   tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>';
   const data = await getSections();
-  tbody.innerHTML = data.map((s,i) => `
-    <tr>
-      <td>${s.sort_order}</td>
-      <td><strong>${s.title}</strong><div style="font-size:11px;color:var(--text-muted)">${s.subtitle||''}</div></td>
-      <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${s.slug}</code></td>
-      <td>${s.is_visible ? '<span class="badge badge-green">Görünür</span>' : '<span class="badge badge-red">Gizli</span>'}</td>
+  _allSections = data;
+  renderSectionsTable(data);
+}
+
+let _allSections = [];
+
+function renderSectionsTable(data) {
+  const tbody = document.getElementById('sections-tbody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading-row">Bölüm bulunamadı.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map((s, idx) => {
+    const isFirst = idx === 0;
+    const isLast  = idx === data.length - 1;
+    const sEnc    = encodeURIComponent(JSON.stringify(s));
+    return `<tr>
+      <td style="font-weight:700;color:var(--primary);text-align:center;width:36px">${idx + 1}</td>
       <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm btn-icon" onclick='editSection(${JSON.stringify(s).replace(/'/g,"\\'")})'><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteSectionUI('${s.id}')"><i class="ti ti-trash"></i></button>
+        <strong style="font-size:13px">${s.title}</strong>
+        <div style="font-size:11px;color:var(--text-muted)">${s.subtitle||''}</div>
+      </td>
+      <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${s.slug}</code></td>
+      <td>${s.is_visible
+        ? '<span class="badge badge-green">Görünür</span>'
+        : '<span class="badge badge-red">Gizli</span>'}</td>
+      <td>
+        <div style="display:flex;gap:3px;align-items:center">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Yukarı"
+            ${isFirst ? 'disabled style="opacity:.3"' : ''}
+            onclick="moveSection('${s.id}', -1)">
+            <i class="ti ti-arrow-up"></i>
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Aşağı"
+            ${isLast ? 'disabled style="opacity:.3"' : ''}
+            onclick="moveSection('${s.id}', 1)">
+            <i class="ti ti-arrow-down"></i>
+          </button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle"
+            onclick="editSection(JSON.parse(decodeURIComponent('${sEnc}')))">
+            <i class="ti ti-pencil"></i>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Sil"
+            onclick="deleteSectionUI('${s.id}')">
+            <i class="ti ti-trash"></i>
+          </button>
         </div>
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" class="loading-row">Bölüm bulunamadı.</td></tr>';
+    </tr>`;
+  }).join('');
 }
+
+window.moveSection = async function(sectionId, direction) {
+  const idx = _allSections.findIndex(s => s.id === sectionId);
+  if (idx < 0) return;
+  const swapIdx = idx + direction;
+  if (swapIdx < 0 || swapIdx >= _allSections.length) return;
+
+  const aOrder = _allSections[idx].sort_order;
+  const bOrder = _allSections[swapIdx].sort_order;
+
+  if (aOrder === bOrder) {
+    await normalizeSectionOrders();
+    await loadSections();
+    return;
+  }
+
+  await Promise.all([
+    updateSection(_allSections[idx].id,     { sort_order: bOrder }),
+    updateSection(_allSections[swapIdx].id, { sort_order: aOrder }),
+  ]);
+
+  await loadSections();
+  await loadMasterData(); // Diğer selectleri güncelle
+};
+
+async function normalizeSectionOrders() {
+  const all = await getSections();
+  await Promise.all(all.map((s, i) =>
+    updateSection(s.id, { sort_order: (i + 1) * 10 })
+  ));
+}
+
 
 window.openSectionModal = function() {
   document.getElementById('section-modal-title').textContent = 'Yeni Bölüm';
