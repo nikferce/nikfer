@@ -240,7 +240,7 @@ select.form-control{cursor:pointer}
       <div class="card">
         <div class="tbl-wrap">
           <table class="data-table">
-            <thead><tr><th>#</th><th>Tür</th><th>İçerik</th><th>Sıra</th><th>İşlem</th></tr></thead>
+            <thead><tr><th style="width:40px">#</th><th style="width:90px">Tür</th><th>İçerik</th><th style="width:180px">İşlem</th></tr></thead>
             <tbody id="blocks-tbody"><tr><td colspan="5" class="loading-row">Bölüm seçin</td></tr></tbody>
           </table>
         </div>
@@ -714,32 +714,110 @@ window.deleteSectionUI = async function(id) {
 // ── CONTENT BLOCKS ────────────────────────────────────────────
 window.loadBlocks = async function(sectionId) {
   if (!sectionId) return;
+  _currentSectionId = sectionId;
   const tbody = document.getElementById('blocks-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
   const blocks = await getContentBlocks(sectionId);
-  tbody.innerHTML = blocks.map(b => `
-    <tr>
-      <td>${b.sort_order}</td>
-      <td><span class="badge badge-blue">${b.type}</span></td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${(b.content||'').slice(0,80)}${(b.content||'').length>80?'…':''}</td>
-      <td>${b.sort_order}</td>
-      <td>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-ghost btn-sm btn-icon" onclick='editBlock(${JSON.stringify(b).replace(/'/g,"\\'")})'><i class="ti ti-pencil"></i></button>
-          <button class="btn btn-danger btn-sm btn-icon" onclick="deleteBlockUI('${b.id}','${sectionId}')"><i class="ti ti-trash"></i></button>
+  _currentBlocks = blocks;
+  renderBlocksTable(blocks, sectionId);
+};
+
+let _currentBlocks = [];
+let _currentSectionId = null;
+
+function renderBlocksTable(blocks, sectionId) {
+  const tbody = document.getElementById('blocks-tbody');
+  if (!blocks.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading-row">İçerik bloğu bulunamadı.</td></tr>';
+    return;
+  }
+  const typeColors = {paragraph:'blue',heading:'purple',quote:'yellow',poem:'green',list_item:'blue',info_row:'yellow',table_row:'blue',note:'red',divider:'blue'};
+  let rows = '';
+  blocks.forEach((b, idx) => {
+    const isFirst = idx === 0;
+    const isLast  = idx === blocks.length - 1;
+    const preview = (b.content || '—').replace(/</g,'&lt;').slice(0,65) + ((b.content||'').length > 65 ? '…' : '');
+    const color   = typeColors[b.type] || 'blue';
+    const bEnc    = encodeURIComponent(JSON.stringify(b));
+    rows += `<tr>
+      <td style="font-weight:700;color:var(--primary);text-align:center;width:36px">${idx + 1}</td>
+      <td style="width:90px"><span class="badge badge-${color}" style="white-space:nowrap;font-size:9px">${b.type}</span></td>
+      <td style="font-size:11px;color:var(--text-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</td>
+      <td style="width:190px">
+        <div style="display:flex;gap:3px;align-items:center">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Yukarı" ${isFirst?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',-1)"><i class="ti ti-arrow-up"></i></button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Aşağı" ${isLast?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',1)"><i class="ti ti-arrow-down"></i></button>
+          <button class="btn btn-sm btn-icon" title="Altına ekle" style="background:rgba(39,174,96,.1);color:#1E8449;border:1px solid rgba(39,174,96,.3)" onclick="openBlockModalAfter(${idx+1})"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle" onclick="editBlock(JSON.parse(decodeURIComponent('${bEnc}')))"><i class="ti ti-pencil"></i></button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Sil" onclick="deleteBlockUI('${b.id}','${sectionId}')"><i class="ti ti-trash"></i></button>
         </div>
       </td>
-    </tr>`).join('') || '<tr><td colspan="5" class="loading-row">İçerik bloğu bulunamadı.</td></tr>';
+    </tr>`;
+  });
+  tbody.innerHTML = rows;
+}
+
+window.moveBlock = async function(blockId, direction) {
+  const idx = _currentBlocks.findIndex(b => b.id === blockId);
+  if (idx < 0) return;
+  const swapIdx = idx + direction;
+  if (swapIdx < 0 || swapIdx >= _currentBlocks.length) return;
+  const aOrder = _currentBlocks[idx].sort_order;
+  const bOrder = _currentBlocks[swapIdx].sort_order;
+  if (aOrder === bOrder) {
+    await normalizeBlockOrders(_currentSectionId);
+  } else {
+    await Promise.all([
+      updateBlock(_currentBlocks[idx].id,    {sort_order: bOrder}),
+      updateBlock(_currentBlocks[swapIdx].id, {sort_order: aOrder}),
+    ]);
+  }
+  await loadBlocks(_currentSectionId);
 };
+
+async function normalizeBlockOrders(sectionId) {
+  const blocks = await getContentBlocks(sectionId);
+  await Promise.all(blocks.map((b,i) => updateBlock(b.id, {sort_order:(i+1)*10})));
+}
+
+window.openBlockModalAfter = function(afterIndex) {
+  const blocks = _currentBlocks;
+  let newOrder;
+  if (!blocks.length || afterIndex >= blocks.length) {
+    newOrder = (blocks[blocks.length-1]?.sort_order || 0) + 10;
+  } else {
+    const before = blocks[afterIndex-1]?.sort_order || 0;
+    const after  = blocks[afterIndex]?.sort_order   || before + 20;
+    newOrder = Math.floor((before + after) / 2);
+    if (newOrder <= before) {
+      normalizeBlockOrders(_currentSectionId).then(() =>
+        loadBlocks(_currentSectionId).then(() => openBlockModalAfter(afterIndex))
+      );
+      return;
+    }
+  }
+  openBlockModal();
+  document.getElementById('block-sort').value = newOrder;
+  document.getElementById('block-modal-title').textContent = afterIndex + '. satırın altına yeni blok';
+};
+
 
 window.openBlockModal = function() {
   document.getElementById('block-modal-title').textContent = 'Yeni İçerik Bloğu';
   document.getElementById('block-id').value      = '';
   document.getElementById('block-content').value = '';
   document.getElementById('block-meta').value    = '';
-  document.getElementById('block-sort').value    = '0';
   document.getElementById('block-type').value    = 'paragraph';
   onBlockTypeChange();
+  if (_currentSectionId) {
+    document.getElementById('block-section-id').value = _currentSectionId;
+    const lastOrder = _currentBlocks.length
+      ? (_currentBlocks[_currentBlocks.length-1].sort_order + 10)
+      : 10;
+    document.getElementById('block-sort').value = lastOrder;
+  } else {
+    document.getElementById('block-sort').value = '10';
+  }
   openModal('block-modal');
 };
 
@@ -794,7 +872,7 @@ window.saveBlockUI = async function() {
     if (id) await updateBlock(id, payload);
     else    await createBlock(payload);
     closeModal('block-modal');
-    loadBlocks(payload.section_id);
+    await loadBlocks(payload.section_id);
   } catch(e) {
     alert.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
   }
