@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🏡</text></svg>">
 <title>Nikfer Belleği — Admin</title>
 <style>
@@ -120,6 +121,18 @@ select.form-control{cursor:pointer}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-row{text-align:center;padding:30px;color:var(--text-muted);font-size:13px}
+/* Quill Editor Özelleştirme */
+.quill-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.quill-wrap .ql-toolbar{border:none;border-bottom:1px solid var(--border);background:#faf7f2;padding:6px 8px;flex-wrap:wrap}
+.quill-wrap .ql-toolbar .ql-formats{margin-right:8px}
+.quill-wrap .ql-container{border:none;font-size:13px;min-height:120px;max-height:320px;overflow-y:auto}
+.quill-wrap .ql-editor{padding:10px 12px;line-height:1.8;color:var(--text)}
+.quill-wrap .ql-editor p{margin-bottom:6px}
+#block-content{display:none}
+.plain-editor{display:block}
+.quill-wrap{display:none}
+.show-quill .quill-wrap{display:block}
+.show-quill #block-content-plain{display:none}
 
 /* MOBILE RESPONSIVE */
 @media(max-width:768px){
@@ -444,9 +457,17 @@ select.form-control{cursor:pointer}
           <input class="form-control" type="number" id="block-sort" value="0">
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="block-content-group">
         <label class="form-label" id="block-content-label">İçerik *</label>
-        <textarea class="form-control" id="block-content" rows="5" placeholder="İçeriği buraya yazın..."></textarea>
+        <!-- Düz metin alanı (şiir, tablo, kod vb. için) -->
+        <textarea class="form-control plain-editor" id="block-content-plain" rows="5"
+          placeholder="İçeriği buraya yazın..."></textarea>
+        <!-- Zengin metin editörü (paragraf, alıntı, madde için) -->
+        <div class="quill-wrap">
+          <div id="quill-editor"></div>
+        </div>
+        <!-- Gizli alan — her zaman ham değeri saklar -->
+        <textarea id="block-content" style="display:none"></textarea>
       </div>
       <div class="form-group" id="block-meta-group" style="display:none">
         <label class="form-label" id="block-meta-label">Meta (JSON)</label>
@@ -503,6 +524,7 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script type="module">
 import {
   supabase,
@@ -519,6 +541,75 @@ let sections = [];
 let currentSection = null;
 
 // ── AUTH ─────────────────────────────────────────────────────
+// ── QUILL EDITOR ─────────────────────────────────────────────
+let quillInstance = null;
+
+function initQuill() {
+  if (quillInstance) return; // Zaten başlatılmış
+  quillInstance = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Paragraf metnini buraya yazın...',
+    modules: {
+      toolbar: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        ['blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'align': [] }],
+        ['link'],
+        ['clean']
+      ]
+    }
+  });
+}
+
+// Zengin editör mi düz metin mi gösterileceğini belirle
+const RICH_TEXT_TYPES = ['paragraph', 'quote', 'list_item', 'heading'];
+
+function setEditorMode(type) {
+  const group   = document.getElementById('block-content-group');
+  const plain   = document.getElementById('block-content-plain');
+  if (RICH_TEXT_TYPES.includes(type)) {
+    group.classList.add('show-quill');
+    initQuill();
+  } else {
+    group.classList.remove('show-quill');
+  }
+}
+
+// Quill içeriğini gizli textarea'ya senkronize et (kaydetmeden önce)
+function syncQuillToTextarea() {
+  const type = document.getElementById('block-type').value;
+  if (RICH_TEXT_TYPES.includes(type) && quillInstance) {
+    const html = quillInstance.getSemanticHTML();
+    // Sadece içerik varsa al; boş paragraf bırakma
+    const clean = html === '<p></p>' || html === '<p><br></p>' ? '' : html;
+    document.getElementById('block-content').value = clean;
+  } else {
+    document.getElementById('block-content').value =
+      document.getElementById('block-content-plain').value;
+  }
+}
+
+// Editörü doldur (düzenle modunda)
+function fillEditor(type, value) {
+  if (RICH_TEXT_TYPES.includes(type)) {
+    setEditorMode(type);
+    if (quillInstance) {
+      if (value && value.trim().startsWith('<')) {
+        quillInstance.clipboard.dangerouslyPasteHTML(value);
+      } else {
+        quillInstance.setText(value || '');
+      }
+    }
+  } else {
+    setEditorMode(type);
+    document.getElementById('block-content-plain').value = value || '';
+  }
+}
+
 onAuthChange((event, session) => {
   if (session) showAdmin();
   else showLogin();
@@ -886,10 +977,12 @@ window.openBlockModalAfter = function(afterIndex) {
 
 window.openBlockModal = function() {
   document.getElementById('block-modal-title').textContent = 'Yeni İçerik Bloğu';
-  document.getElementById('block-id').value      = '';
-  document.getElementById('block-content').value = '';
-  document.getElementById('block-meta').value    = '';
-  document.getElementById('block-type').value    = 'paragraph';
+  document.getElementById('block-id').value             = '';
+  document.getElementById('block-content').value        = '';
+  document.getElementById('block-content-plain').value  = '';
+  document.getElementById('block-meta').value           = '';
+  document.getElementById('block-type').value           = 'paragraph';
+  if (quillInstance) quillInstance.setContents([]);
   onBlockTypeChange();
   if (_currentSectionId) {
     document.getElementById('block-section-id').value = _currentSectionId;
@@ -908,15 +1001,17 @@ window.editBlock = function(b) {
   document.getElementById('block-id').value         = b.id;
   document.getElementById('block-section-id').value = b.section_id;
   document.getElementById('block-type').value       = b.type;
-  document.getElementById('block-content').value    = b.content || '';
   document.getElementById('block-meta').value       = JSON.stringify(b.meta||{}, null, 2);
   document.getElementById('block-sort').value       = b.sort_order;
   onBlockTypeChange();
+  // Editörü içerikle doldur (tip değiştikten SONRA)
+  setTimeout(() => fillEditor(b.type, b.content || ''), 50);
   openModal('block-modal');
 };
 
 window.onBlockTypeChange = function() {
   const type = document.getElementById('block-type').value;
+  setEditorMode(type);
   const metaGroup = document.getElementById('block-meta-group');
   const metaLabel = document.getElementById('block-meta-label');
   const metaHint  = document.getElementById('block-meta-hint');
@@ -938,6 +1033,7 @@ window.onBlockTypeChange = function() {
 };
 
 window.saveBlockUI = async function() {
+  syncQuillToTextarea(); // Quill içeriğini textarea'ya aktar
   const id      = document.getElementById('block-id').value;
   const alert   = document.getElementById('block-modal-alert');
   let meta = {};
