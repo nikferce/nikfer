@@ -86,13 +86,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .list-arrow{color:var(--border);font-size:15px;margin-top:2px;flex-shrink:0}
 
 /* DETAIL OVERLAY */
-.detail-page{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto}
+.detail-page{display:none;position:fixed;inset:0;z-index:200;background:var(--bg);overflow-y:auto;padding-bottom:var(--nav-h)}
 .detail-page.open{display:block;animation:slideIn .25s ease}
 @keyframes slideIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .detail-header{position:sticky;top:0;z-index:10;background:var(--primary);padding:11px 14px;display:flex;align-items:center;gap:10px}
 .back-btn{background:none;border:none;color:#FFF;font-size:22px;cursor:pointer;display:flex;align-items:center;padding:2px;flex-shrink:0}
 .detail-header h2{color:#FFF;font-size:14px;font-weight:600;flex:1;line-height:1.3}
 .detail-body{padding:14px}
+/* Detail sayfasında Bottom Nav */
+.detail-nav{position:fixed;bottom:0;left:0;right:0;z-index:300;height:var(--nav-h);background:#FFF;border-top:1px solid var(--border);display:none;padding-bottom:env(safe-area-inset-bottom)}
+.detail-page.open + * + * .detail-nav,
+.detail-nav.visible{display:flex}
 
 /* CONTENT BLOCK RENDERERS */
 .blk-paragraph{font-size:13px;line-height:1.85;color:var(--text);margin-bottom:14px;text-align:justify}
@@ -328,7 +332,9 @@ textarea.form-input{resize:none;min-height:72px}
 <!-- DETAIL OVERLAY -->
 <div id="detail-overlay" class="detail-page">
   <div class="detail-header">
-    <button class="back-btn" onclick="closeDetail()"><i class="ti ti-arrow-left"></i></button>
+    <button class="back-btn" onclick="closeDetail()">
+      <i class="ti ti-arrow-left"></i>
+    </button>
     <h2 id="detail-title">—</h2>
     <button class="header-btn" id="detail-share-btn" onclick="shareDetail()" title="Bu bölümü paylaş">
       <i class="ti ti-share"></i>
@@ -337,6 +343,29 @@ textarea.form-input{resize:none;min-height:72px}
   <div class="detail-body" id="detail-body">
     <div class="loading"><div class="spinner"></div></div>
   </div>
+  <!-- Detail içinde Bottom Nav -->
+  <nav class="detail-nav visible" id="detail-bottom-nav">
+    <button class="nav-item" onclick="closeDetail()">
+      <i class="ti ti-arrow-left"></i>
+      <span>Geri</span>
+    </button>
+    <button class="nav-item" onclick="closeDetailGoHome()">
+      <i class="ti ti-home"></i>
+      <span>Ana Sayfa</span>
+    </button>
+    <button class="nav-item" onclick="closeDetailGoPage('kultur')">
+      <i class="ti ti-book"></i>
+      <span>Kültür</span>
+    </button>
+    <button class="nav-item" onclick="closeDetailGoPage('tarih')">
+      <i class="ti ti-timeline"></i>
+      <span>Tarih</span>
+    </button>
+    <button class="nav-item" onclick="closeDetailGoPage('topluluk')">
+      <i class="ti ti-message-circle"></i>
+      <span>Topluluk</span>
+    </button>
+  </nav>
 </div>
 
 <!-- LİGHTBOX -->
@@ -420,6 +449,24 @@ window.closeDetail = function() {
   document.body.style.overflow = '';
   history.pushState({}, '', window.location.pathname);
   currentSlug = null;
+};
+
+window.closeDetailGoHome = function() {
+  closeDetail();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-home').classList.add('active');
+  document.querySelector('.bottom-nav .nav-item:first-child').classList.add('active');
+};
+
+window.closeDetailGoPage = function(pageId) {
+  closeDetail();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  const navMap = {home:0, kultur:1, tarih:2, topluluk:3};
+  const idx = navMap[pageId] ?? 0;
+  document.querySelectorAll('.bottom-nav .nav-item')[idx]?.classList.add('active');
 };
 
 // ── RENDER SECTION ─────────────────────────────────────────
