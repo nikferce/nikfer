@@ -322,12 +322,28 @@ textarea.form-input{resize:none;min-height:72px}
       <h3><i class="ti ti-message-circle" style="color:var(--primary);margin-right:5px"></i>Anı veya yorum paylaş</h3>
       <input class="form-input" id="c-name" placeholder="Adınız *">
       <input class="form-input" id="c-note" placeholder="Kısa not (isteğe bağlı — örn. '1965 doğumlu')">
+      <!-- Bölüm seçimi — isteğe bağlı -->
+      <div style="position:relative;margin-bottom:8px">
+        <select class="form-input" id="c-section" style="appearance:none;-webkit-appearance:none;padding-right:32px;color:var(--text);cursor:pointer">
+          <option value="">📂 Hangi bölüm hakkında? (isteğe bağlı)</option>
+        </select>
+        <i class="ti ti-chevron-down" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text-muted);pointer-events:none"></i>
+      </div>
       <textarea class="form-input" id="c-text" placeholder="Nikfer'le ilgili bir anınızı veya düşüncenizi paylaşın..."></textarea>
       <button class="form-btn" onclick="submitCommentUI()">
         <i class="ti ti-send" style="margin-right:5px"></i>Paylaş
       </button>
     </div>
-    <div class="sec-title">Paylaşımlar</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 8px">
+      <div class="sec-title" style="margin:0">Paylaşımlar</div>
+      <div style="position:relative">
+        <select id="c-filter" onchange="filterCommentsUI(this.value)"
+          style="appearance:none;-webkit-appearance:none;font-size:11px;border:1px solid var(--border);border-radius:8px;padding:5px 28px 5px 10px;background:var(--bg-card);color:var(--text-muted);cursor:pointer;outline:none">
+          <option value="">Tümü</option>
+        </select>
+        <i class="ti ti-filter" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text-muted);pointer-events:none"></i>
+      </div>
+    </div>
     <div id="comments-wrap">
       <div class="loading"><div class="spinner"></div></div>
     </div>
@@ -695,10 +711,43 @@ async function loadGununBilmecesi() {
 async function loadComments() {
   try {
     const comments = await getApprovedComments();
+    _allComments = comments;
     renderComments(comments, 'comments-wrap');
+    populateCommentSelects(comments);
   } catch(e) {
     document.getElementById('comments-wrap').innerHTML =
       `<div class="error-msg">Yorumlar yüklenemedi.</div>`;
+  }
+}
+
+function populateCommentSelects(comments) {
+  // Bölüm seçim dropdown'larını doldur
+  const sections = cache.sections || [];
+  if (!sections.length) return;
+
+  const sectionOpts = sections.map(s =>
+    `<option value="${s.id}">${s.title}</option>`
+  ).join('');
+
+  // Yorum formu dropdown
+  const cSection = document.getElementById('c-section');
+  if (cSection) {
+    cSection.innerHTML =
+      '<option value="">📂 Hangi bölüm hakkında? (isteğe bağlı)</option>' + sectionOpts;
+  }
+
+  // Filtre dropdown — sadece yorumu olan bölümleri göster
+  const sectionIdsWithComments = [...new Set(comments.map(c => c.section_id).filter(Boolean))];
+  const filterOpts = sections
+    .filter(s => sectionIdsWithComments.includes(s.id))
+    .map(s => {
+      const count = comments.filter(c => c.section_id === s.id).length;
+      return `<option value="${s.id}">${s.title} (${count})</option>`;
+    }).join('');
+
+  const cFilter = document.getElementById('c-filter');
+  if (cFilter) {
+    cFilter.innerHTML = `<option value="">Tümü (${comments.length})</option>` + filterOpts;
   }
 }
 
@@ -727,36 +776,50 @@ function renderComments(list, containerId) {
 
 function commentHTML(c) {
   const date = new Date(c.created_at).toLocaleDateString('tr-TR');
+  // Bölüm adını cache.sections'dan bul
+  const section = (cache.sections || []).find(s => s.id === c.section_id);
+  const sectionTag = section
+    ? `<span style="display:inline-block;background:rgba(139,69,19,.08);color:var(--primary);font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;margin-bottom:6px">
+        <i class="ti ti-book" style="font-size:11px;margin-right:3px"></i>${section.title}
+       </span>`
+    : '';
   return `<div class="comment-item">
     <div class="comment-meta">
       <span class="comment-name">${c.author_name}${c.is_pinned ? ' <span class="pinned-badge">Öne Çıkan</span>' : ''}</span>
       <span class="comment-date">${date}</span>
     </div>
     ${c.author_note ? `<div class="comment-note">${c.author_note}</div>` : ''}
+    ${sectionTag}
     <div class="comment-text">${c.content}</div>
   </div>`;
 }
 
 window.submitCommentUI = async function() {
-  const name = document.getElementById('c-name').value.trim();
-  const note = document.getElementById('c-note').value.trim();
-  const text = document.getElementById('c-text').value.trim();
+  const name      = document.getElementById('c-name').value.trim();
+  const note      = document.getElementById('c-note').value.trim();
+  const text      = document.getElementById('c-text').value.trim();
+  const sectionId = document.getElementById('c-section').value || null;
   if (!name || !text) { showToast('Lütfen adınızı ve yorumunuzu girin.'); return; }
 
   try {
-    await submitComment({
-      sectionId: currentSlug ? (cache[currentSlug]?.section?.id || null) : null,
-      authorName: name,
-      authorNote: note,
-      content: text
-    });
-    document.getElementById('c-name').value = '';
-    document.getElementById('c-note').value = '';
-    document.getElementById('c-text').value = '';
+    await submitComment({ sectionId, authorName: name, authorNote: note, content: text });
+    document.getElementById('c-name').value    = '';
+    document.getElementById('c-note').value    = '';
+    document.getElementById('c-text').value    = '';
+    document.getElementById('c-section').value = '';
     showToast('Yorumunuz alındı. Admin onayından sonra yayınlanacak.');
   } catch(e) {
     showToast('Hata: ' + e.message);
   }
+};
+
+// Bölüme göre filtrele
+let _allComments = [];
+window.filterCommentsUI = async function(sectionId) {
+  const filtered = sectionId
+    ? _allComments.filter(c => c.section_id === sectionId)
+    : _allComments;
+  renderComments(filtered, 'comments-wrap');
 };
 
 // ── NAVİGASYON ────────────────────────────────────────────
