@@ -18,6 +18,29 @@ export async function getSections() {
   return data;
 }
 
+export async function getFeaturedSections() {
+  const { data, error } = await supabase
+    .from('sections')
+    .select('*')
+    .eq('is_visible', true)
+    .eq('is_featured', true)
+    .order('sort_order')
+    .limit(4);
+  if (error) throw error;
+  return data;
+}
+
+export async function getRecentComments(limit = 3) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*, sections(title, slug, icon)')
+    .eq('is_approved', true)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
 export async function getSectionBySlug(slug) {
   const { data, error } = await supabase
     .from('sections')
