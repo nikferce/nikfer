@@ -633,12 +633,32 @@ function renderSection(data) {
     });
   }
 
-  // Topluluk yorumları (bölüm bazlı)
-  html += `<div class="blk-heading" style="margin-top:24px"><i class="ti ti-message-circle" style="margin-right:6px;font-size:14px"></i>Bu bölüme yorumlar</div>`;
-  html += `<div id="section-comments-${section.id}"><div class="loading"><div class="spinner"></div></div></div>`;
-
-  // Async yorum yükle
-  setTimeout(() => loadSectionComments(section.id), 100);
+  // Topluluk yorumları — comments_enabled kontrolü
+  if (section.comments_enabled !== false) {
+    html += `<div class="blk-heading" style="margin-top:24px">
+      <i class="ti ti-message-circle" style="margin-right:6px;font-size:14px"></i>Bu bölüme yorumlar
+    </div>`;
+    // Yorum formu
+    html += `<div style="margin-bottom:12px">
+      <input class="form-input" id="sc-name-${section.id}" placeholder="Adınız *"
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;margin-bottom:8px">
+      <textarea class="form-input" id="sc-text-${section.id}" rows="3"
+        placeholder="Bu bölüm hakkında bir anınızı veya düşüncenizi paylaşın..."
+        style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:72px;margin-bottom:8px"></textarea>
+      <button onclick="submitSectionComment('${section.id}')"
+        style="background:var(--primary);color:#FFF;border:none;border-radius:9px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%">
+        <i class="ti ti-send" style="margin-right:5px"></i>Yorum Yap
+      </button>
+    </div>`;
+    html += `<div id="section-comments-${section.id}"><div class="loading"><div class="spinner"></div></div></div>`;
+    // Async yorum yükle
+    setTimeout(() => loadSectionComments(section.id), 100);
+  } else {
+    html += `<div style="background:rgba(139,69,19,.05);border-radius:10px;padding:12px 14px;margin-top:20px;display:flex;align-items:center;gap:8px">
+      <i class="ti ti-message-off" style="color:var(--text-muted);font-size:18px"></i>
+      <span style="font-size:12px;color:var(--text-muted)">Bu bölüm için yorum kapalıdır.</span>
+    </div>`;
+  }
 
   return html;
 }
@@ -841,6 +861,24 @@ function commentHTML(c) {
     <div class="comment-text">${c.content}</div>
   </div>`;
 }
+
+// Bölüm detayından doğrudan yorum gönder
+window.submitSectionComment = async function(sectionId) {
+  const nameEl = document.getElementById(`sc-name-${sectionId}`);
+  const textEl = document.getElementById(`sc-text-${sectionId}`);
+  if (!nameEl || !textEl) return;
+  const name = nameEl.value.trim();
+  const text = textEl.value.trim();
+  if (!name || !text) { showToast('Lütfen adınızı ve yorumunuzu girin.'); return; }
+  try {
+    await submitComment({ sectionId, authorName: name, authorNote: '', content: text });
+    nameEl.value = '';
+    textEl.value = '';
+    showToast('Yorumunuz alındı. Admin onayından sonra yayınlanacak.');
+  } catch(e) {
+    showToast('Hata: ' + e.message);
+  }
+};
 
 window.submitCommentUI = async function() {
   const name      = document.getElementById('c-name').value.trim();
