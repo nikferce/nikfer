@@ -1500,7 +1500,7 @@ async function loadSettings() {
     const nufusEl = document.getElementById('setting-nufus');
     if (nufusEl) nufusEl.value = settings['nufus']?.value || '';
 
-    // Otomatik istatistikler
+    // Otomatik istatistikler — 0 değeri de göster
     const map = {
       'as-muhtar': counts.muhtarCount,
       'as-sehit':  counts.sehitCount,
@@ -1509,9 +1509,12 @@ async function loadSettings() {
     };
     Object.entries(map).forEach(([id, val]) => {
       const el = document.getElementById(id);
-      if (el) el.textContent = val ?? '—';
+      if (el) el.textContent = (val !== null && val !== undefined) ? val : '—';
     });
+
+    console.log('İstatistikler:', counts);
   } catch(e) {
+    console.error('loadSettings hatası:', e);
     document.getElementById('settings-alert').innerHTML =
       `<div class="alert alert-danger">Yüklenemedi: ${e.message}</div>`;
   }
