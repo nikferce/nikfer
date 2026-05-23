@@ -664,7 +664,7 @@ function renderSection(data) {
   // Tablo başlıkları (slug'a göre)
   const tableHeaders = {
     muhtarlar: ['#','Ad / Lakap','Dönem','Doğum','Ölüm'],
-    canakkale: ['#','Ad','Baba','Lakap','Doğum','Tarih','Yer','Birlik'],
+    canakkale: null, // Özel kart render kullanılacak
   };
 
   // Blokları türe göre gruplama
@@ -826,6 +826,11 @@ function renderBlock(b) {
 }
 
 function renderTable(rows, headers) {
+  // headers null ise kart formatında render et (Çanakkale gibi geniş tablolar)
+  if (headers === null) {
+    return renderCardsFromTable(rows);
+  }
+
   const cols = rows[0]?.meta?.cols || [];
   const colCount = cols.length;
   let th = headers
@@ -835,6 +840,33 @@ function renderTable(rows, headers) {
   return `<div class="tbl-wrap"><table class="tbl"><thead><tr>${th}</tr></thead><tbody>
     ${rows.map(r => `<tr>${(r.meta.cols||[]).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}
   </tbody></table></div>`;
+}
+
+// Geniş tablolar için kart formatı — mobilde taşmaz
+function renderCardsFromTable(rows) {
+  return `<div style="display:flex;flex-direction:column;gap:8px;margin:12px 0">
+    ${rows.map(r => {
+      const c = r.meta.cols || [];
+      // cols: [no, ad, baba, lakap, dogum, tarih, yer, birlik]
+      const [no, ad, baba, lakap, dogum, tarih, yer, birlik] = c;
+      return `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;position:relative">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+          <div>
+            <span style="font-size:15px;font-weight:700;color:var(--text)">${ad || '—'}</span>
+            <span style="font-size:12px;color:var(--text-muted);margin-left:5px">${baba ? baba + ' oğlu' : ''}</span>
+          </div>
+          <span style="background:rgba(139,20,20,.08);color:#8B1A1A;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;flex-shrink:0;margin-left:8px">${no || ''}</span>
+        </div>
+        ${lakap && lakap !== '—' ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;font-style:italic">${lakap}</div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          ${tarih ? `<div style="font-size:11px"><span style="color:var(--text-muted)">Tarih: </span><span style="font-weight:500;color:#8B1A1A">${tarih}</span></div>` : ''}
+          ${dogum ? `<div style="font-size:11px"><span style="color:var(--text-muted)">Doğum: </span><span>${dogum}</span></div>` : ''}
+          ${yer && yer !== '—' ? `<div style="font-size:11px;grid-column:1/-1"><span style="color:var(--text-muted)">Yer: </span><span>${yer}</span></div>` : ''}
+          ${birlik ? `<div style="font-size:11px;grid-column:1/-1"><span style="color:var(--text-muted)">Birlik: </span><span>${birlik}</span></div>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function renderInfoRows(rows) {
