@@ -482,6 +482,79 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
+<!-- Ses Düzenle Modal -->
+<div class="modal-bg" id="audio-edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Ses Dosyasını Düzenle</h3>
+      <button class="modal-close" onclick="closeModal('audio-edit-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="audio-edit-alert"></div>
+      <input type="hidden" id="ae-id">
+      <input type="hidden" id="ae-section-id">
+      <div class="form-group">
+        <label class="form-label">Başlık *</label>
+        <input class="form-control" id="ae-title" placeholder="Ses başlığı">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sıra Numarası</label>
+        <input class="form-control" type="number" id="ae-sort" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color:var(--text-muted);font-size:11px">
+          <i class="ti ti-info-circle" style="margin-right:3px"></i>
+          Ses dosyasını değiştirmek için önce silin, sonra yeniden yükleyin.
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('audio-edit-modal')">İptal</button>
+      <button class="btn btn-primary" onclick="saveAudioEditUI()"><i class="ti ti-check"></i> Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fotoğraf Düzenle Modal -->
+<div class="modal-bg" id="image-edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Fotoğrafı Düzenle</h3>
+      <button class="modal-close" onclick="closeModal('image-edit-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="image-edit-alert"></div>
+      <input type="hidden" id="ie-id">
+      <input type="hidden" id="ie-section-id">
+      <div style="margin-bottom:14px;text-align:center">
+        <img id="ie-preview" src="" style="max-width:100%;max-height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" loading="lazy">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Başlık</label>
+        <input class="form-control" id="ie-title" placeholder="Fotoğraf başlığı">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Altyazı</label>
+        <input class="form-control" id="ie-caption" placeholder="Kısa açıklama">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sıra Numarası</label>
+        <input class="form-control" type="number" id="ie-sort" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color:var(--text-muted);font-size:11px">
+          <i class="ti ti-info-circle" style="margin-right:3px"></i>
+          Görseli değiştirmek için önce silin, sonra yeniden yükleyin.
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('image-edit-modal')">İptal</button>
+      <button class="btn btn-primary" onclick="saveImageEditUI()"><i class="ti ti-check"></i> Kaydet</button>
+    </div>
+  </div>
+</div>
+
 <!-- Link Modal -->
 <div class="modal-bg" id="link-modal">
   <div class="modal">
@@ -491,6 +564,7 @@ select.form-control{cursor:pointer}
     </div>
     <div class="modal-body">
       <div id="link-modal-alert"></div>
+      <input type="hidden" id="link-edit-id">
       <div class="form-group">
         <label class="form-label">Bölüm *</label>
         <select class="form-control" id="link-section-id"></select>
@@ -531,9 +605,9 @@ import {
   signIn, signOut, getSession, onAuthChange,
   getSections, createSection, updateSection, deleteSection,
   getContentBlocks, createBlock, updateBlock, deleteBlock,
-  getAudioFiles, uploadAudio, deleteAudio,
-  uploadImage, deleteImage, getGallery,
-  getLinks, createLink, deleteLink,
+  getAudioFiles, uploadAudio, updateAudio, deleteAudio,
+  uploadImage, updateImage, deleteImage, getGallery,
+  getLinks, createLink, updateLink, deleteLink,
   getAllComments, approveComment, pinComment, deleteComment
 } from './db.js';
 
@@ -1068,12 +1142,27 @@ window.loadAudio = async function(sectionId) {
   const tbody = document.getElementById('audio-tbody');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
   const files = await getAudioFiles(sectionId);
+  _currentAudio = files;
   tbody.innerHTML = files.map(a => `
     <tr>
-      <td><strong>${a.title}</strong></td>
-      <td><audio controls preload="none" style="height:30px;width:180px"><source src="${a.file_url}"></audio></td>
-      <td style="font-size:11px;color:var(--text-muted)">${a.file_path}</td>
-      <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteAudioUI('${a.id}','${a.file_path}','${sectionId}')"><i class="ti ti-trash"></i></button></td>
+      <td>
+        <strong style="font-size:13px">${a.title}</strong>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Sıra: ${a.sort_order}</div>
+      </td>
+      <td><audio controls preload="none" style="height:30px;width:160px"><source src="${a.file_url}"></audio></td>
+      <td style="font-size:10px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.file_path.split('/').pop()}</td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle"
+            onclick="openAudioEditModal('${a.id}')">
+            <i class="ti ti-pencil"></i>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Sil"
+            onclick="deleteAudioUI('${a.id}','${a.file_path}','${sectionId}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </td>
     </tr>`).join('') || '<tr><td colspan="4" class="loading-row">Ses dosyası yok.</td></tr>';
 };
 
@@ -1103,15 +1192,23 @@ window.loadGallery = async function(sectionId) {
   grid.innerHTML = '<div class="loading-row"><span class="spinner"></span></div>';
   const items = await getGallery(sectionId);
   if (!items.length) { grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Fotoğraf yok.</p>'; return; }
+  _currentGallery = items;
   grid.innerHTML = items.map(g => `
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden">
       <img src="${g.file_url}" style="width:100%;aspect-ratio:4/3;object-fit:cover" loading="lazy">
       <div style="padding:8px">
         <div style="font-size:12px;font-weight:600">${g.title||'—'}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${g.caption||''}</div>
-        <button class="btn btn-danger btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="deleteImageUI('${g.id}','${g.file_path}','${sectionId}')">
-          <i class="ti ti-trash"></i> Sil
-        </button>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" title="Düzenle"
+            onclick="openImageEditModal('${g.id}')">
+            <i class="ti ti-pencil"></i> Düzenle
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Sil"
+            onclick="deleteImageUI('${g.id}','${g.file_path}','${sectionId}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
       </div>
     </div>`).join('');
 };
@@ -1143,23 +1240,46 @@ window.loadLinks = async function(sectionId) {
   const tbody = document.getElementById('links-tbody');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
   const items = await getLinks(sectionId);
+  _currentLinks = items;
   tbody.innerHTML = items.map(l => `
     <tr>
-      <td><strong style="font-size:13px">${l.title}</strong>${l.description?`<div style="font-size:11px;color:var(--text-muted)">${l.description}</div>`:''}</td>
-      <td><a href="${l.url}" target="_blank" style="font-size:11px;color:var(--primary);word-break:break-all">${l.url.slice(0,50)}…</a></td>
+      <td>
+        <strong style="font-size:13px">${l.title}</strong>
+        ${l.description?`<div style="font-size:11px;color:var(--text-muted)">${l.description}</div>`:''}
+      </td>
+      <td>
+        <a href="${l.url}" target="_blank" style="font-size:11px;color:var(--primary);word-break:break-all">
+          ${l.url.slice(0,45)}${l.url.length>45?'…':''}
+        </a>
+      </td>
       <td><span class="badge badge-blue">${l.link_type}</span></td>
-      <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteLinkUI('${l.id}','${sectionId}')"><i class="ti ti-trash"></i></button></td>
+      <td>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle"
+            onclick="openLinkEditModal('${l.id}')">
+            <i class="ti ti-pencil"></i>
+          </button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Sil"
+            onclick="deleteLinkUI('${l.id}','${sectionId}')">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </td>
     </tr>`).join('') || '<tr><td colspan="4" class="loading-row">Link bulunamadı.</td></tr>';
 };
 
 window.openLinkModal = function() {
+  document.getElementById('link-edit-id').value = ''; // Yeni ekleme modu
   ['link-title','link-url','link-desc'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('link-type').value = 'external';
+  document.getElementById('link-type').value    = 'external';
+  document.getElementById('link-section-id').value = '';
+  document.getElementById('link-modal-alert').innerHTML = '';
   openModal('link-modal');
 };
 
 window.saveLinkUI = async function() {
-  const alert = document.getElementById('link-modal-alert');
+  const editId  = document.getElementById('link-edit-id').value;
+  const alertEl = document.getElementById('link-modal-alert');
   const payload = {
     section_id:  document.getElementById('link-section-id').value,
     title:       document.getElementById('link-title').value.trim(),
@@ -1168,14 +1288,18 @@ window.saveLinkUI = async function() {
     link_type:   document.getElementById('link-type').value,
   };
   if (!payload.section_id || !payload.title || !payload.url) {
-    alert.innerHTML = '<div class="alert alert-danger">Bölüm, başlık ve URL zorunludur.</div>'; return;
+    alertEl.innerHTML = '<div class="alert alert-danger">Bölüm, başlık ve URL zorunludur.</div>'; return;
   }
   try {
-    await createLink(payload);
+    if (editId) {
+      await updateLink(editId, payload);
+    } else {
+      await createLink(payload);
+    }
     closeModal('link-modal');
     loadLinks(payload.section_id);
   } catch(e) {
-    alert.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+    alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
   }
 };
 
@@ -1183,6 +1307,87 @@ window.deleteLinkUI = async function(id, sectionId) {
   if (!confirm('Linki silmek istediğinize emin misiniz?')) return;
   await deleteLink(id);
   loadLinks(sectionId);
+};
+
+// ── CACHE DEĞİŞKENLERİ ───────────────────────────────────────
+let _currentAudio   = [];
+let _currentGallery = [];
+let _currentLinks   = [];
+
+// ── SES DÜZENLE ───────────────────────────────────────────────
+window.openAudioEditModal = function(id) {
+  const a = _currentAudio.find(x => x.id === id);
+  if (!a) { alert('Kayıt bulunamadı.'); return; }
+  document.getElementById('ae-id').value         = a.id;
+  document.getElementById('ae-section-id').value = a.section_id;
+  document.getElementById('ae-title').value       = a.title || '';
+  document.getElementById('ae-sort').value        = a.sort_order || 0;
+  document.getElementById('audio-edit-alert').innerHTML = '';
+  openModal('audio-edit-modal');
+};
+
+window.saveAudioEditUI = async function() {
+  const id        = document.getElementById('ae-id').value;
+  const sectionId = document.getElementById('ae-section-id').value;
+  const alert     = document.getElementById('audio-edit-alert');
+  const title     = document.getElementById('ae-title').value.trim();
+  if (!title) { alert.innerHTML = '<div class="alert alert-danger">Başlık zorunludur.</div>'; return; }
+  try {
+    await updateAudio(id, {
+      title,
+      sort_order: parseInt(document.getElementById('ae-sort').value) || 0
+    });
+    closeModal('audio-edit-modal');
+    loadAudio(sectionId);
+  } catch(e) {
+    alert.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+};
+
+// ── FOTOĞRAF DÜZENLE ──────────────────────────────────────────
+window.openImageEditModal = function(id) {
+  const g = _currentGallery.find(x => x.id === id);
+  if (!g) { alert('Kayıt bulunamadı.'); return; }
+  document.getElementById('ie-id').value         = g.id;
+  document.getElementById('ie-section-id').value = g.section_id;
+  document.getElementById('ie-title').value       = g.title || '';
+  document.getElementById('ie-caption').value     = g.caption || '';
+  document.getElementById('ie-sort').value        = g.sort_order || 0;
+  document.getElementById('ie-preview').src       = g.file_url;
+  document.getElementById('image-edit-alert').innerHTML = '';
+  openModal('image-edit-modal');
+};
+
+window.saveImageEditUI = async function() {
+  const id        = document.getElementById('ie-id').value;
+  const sectionId = document.getElementById('ie-section-id').value;
+  const alert     = document.getElementById('image-edit-alert');
+  try {
+    await updateImage(id, {
+      title:      document.getElementById('ie-title').value.trim(),
+      caption:    document.getElementById('ie-caption').value.trim(),
+      sort_order: parseInt(document.getElementById('ie-sort').value) || 0
+    });
+    closeModal('image-edit-modal');
+    loadGallery(sectionId);
+  } catch(e) {
+    alert.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+};
+
+// ── LİNK DÜZENLE ─────────────────────────────────────────────
+window.openLinkEditModal = function(id) {
+  const l = _currentLinks.find(x => x.id === id);
+  if (!l) { alert('Kayıt bulunamadı.'); return; }
+  // Link modalını düzenleme modunda aç
+  document.getElementById('link-edit-id').value      = l.id;
+  document.getElementById('link-section-id').value   = l.section_id;
+  document.getElementById('link-title').value        = l.title || '';
+  document.getElementById('link-url').value          = l.url || '';
+  document.getElementById('link-desc').value         = l.description || '';
+  document.getElementById('link-type').value         = l.link_type || 'external';
+  document.getElementById('link-modal-alert').innerHTML = '';
+  openModal('link-modal');
 };
 
 // ── COMMENTS ─────────────────────────────────────────────────
