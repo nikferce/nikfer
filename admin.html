@@ -196,7 +196,6 @@ select.form-control{cursor:pointer}
     </nav>
       <div class="nav-group-title">Sistem</div>
       <button class="nav-link" onclick="showPanel('settings',this)"><i class="ti ti-settings"></i>Site Ayarları</button>
-    </div>
     <div class="sidebar-footer">
       <button class="nav-link" onclick="doLogout()" style="padding:8px 0;color:rgba(255,255,255,.7)"><i class="ti ti-logout"></i>Çıkış</button>
       <a href="index.html" target="_blank" class="nav-link" style="padding:8px 0;color:rgba(255,255,255,.7);text-decoration:none"><i class="ti ti-external-link"></i>Siteyi Gör</a>
@@ -889,7 +888,7 @@ window.quickDelete = async function(id) {
 };
 
 // ── SECTIONS ─────────────────────────────────────────────────
-async function loadSections() {
+window.loadSections = async function loadSections() {
   const tbody = document.getElementById('sections-tbody');
   tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>';
   const data = await getAllSections(); // Admin: gizli bölümler de görünsün
