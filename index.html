@@ -196,10 +196,26 @@ textarea.form-input{resize:none;min-height:72px}
 .error-msg{background:rgba(200,50,50,.08);border-radius:10px;padding:14px;font-size:13px;color:#8B1A1A;text-align:center;margin:20px 0}
 
 /* LIGHTBOX */
-.lightbox{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.92);align-items:center;justify-content:center}
+.lightbox{display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.93);flex-direction:column;align-items:center;justify-content:center;user-select:none}
 .lightbox.open{display:flex}
-.lightbox img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
-.lightbox-close{position:absolute;top:16px;right:16px;background:none;border:none;color:#FFF;font-size:30px;cursor:pointer}
+.lightbox-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);border:none;color:#FFF;font-size:22px;cursor:pointer;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);z-index:10}
+.lightbox-close:hover{background:rgba(255,255,255,.22)}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.12);border:none;color:#FFF;font-size:24px;cursor:pointer;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:background .15s;z-index:10}
+.lightbox-nav:hover{background:rgba(255,255,255,.25)}
+.lightbox-nav:disabled{opacity:.2;cursor:default}
+.lightbox-prev{left:12px}
+.lightbox-next{right:12px}
+.lightbox-img-wrap{display:flex;align-items:center;justify-content:center;width:100%;flex:1;padding:56px 64px 0}
+.lightbox-img-wrap img{max-width:100%;max-height:72vh;object-fit:contain;border-radius:8px;transition:opacity .2s}
+.lightbox-img-wrap img.fade{opacity:0}
+.lightbox-footer{padding:12px 16px;text-align:center;width:100%}
+.lightbox-caption{color:rgba(255,255,255,.85);font-size:12px;margin-bottom:8px;min-height:16px}
+.lightbox-dots{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;max-width:90vw}
+.lightbox-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);cursor:pointer;border:none;transition:background .2s,transform .2s;flex-shrink:0}
+.lightbox-dot.active{background:#FFF;transform:scale(1.3)}
+.lightbox-counter{color:rgba(255,255,255,.5);font-size:11px;margin-top:6px}
+/* Swipe için */
+.lightbox-img-wrap{touch-action:pan-y}
 
 /* TOAST */
 .toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:rgba(44,26,10,.92);color:#FFF;padding:9px 18px;border-radius:20px;font-size:12px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -405,9 +421,19 @@ textarea.form-input{resize:none;min-height:72px}
 <!-- LİGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
   <button class="lightbox-close" onclick="closeLightbox()"><i class="ti ti-x"></i></button>
-  <div style="display:flex;flex-direction:column;align-items:center;gap:10px;max-width:95vw" onclick="event.stopPropagation()">
-    <img id="lightbox-img" src="" alt="" style="max-width:95vw;max-height:80vh;object-fit:contain;border-radius:8px">
-    <div id="lightbox-caption" style="color:rgba(255,255,255,.8);font-size:12px;text-align:center;padding:0 16px"></div>
+  <button class="lightbox-nav lightbox-prev" id="lb-prev" onclick="lbNav(-1);event.stopPropagation()" disabled>
+    <i class="ti ti-chevron-left"></i>
+  </button>
+  <button class="lightbox-nav lightbox-next" id="lb-next" onclick="lbNav(1);event.stopPropagation()">
+    <i class="ti ti-chevron-right"></i>
+  </button>
+  <div class="lightbox-img-wrap" id="lb-img-wrap" onclick="event.stopPropagation()">
+    <img id="lightbox-img" src="" alt="">
+  </div>
+  <div class="lightbox-footer" onclick="event.stopPropagation()">
+    <div class="lightbox-caption" id="lightbox-caption"></div>
+    <div class="lightbox-dots" id="lb-dots"></div>
+    <div class="lightbox-counter" id="lb-counter"></div>
   </div>
 </div>
 
@@ -863,25 +889,109 @@ function handleDeepLink() {
 }
 
 // ── LIGHTBOX ──────────────────────────────────────────────
+// ── LIGHTBOX GALERİ ───────────────────────────────────────────
+let _lbImages  = [];   // {url, caption} dizisi
+let _lbIndex   = 0;    // aktif fotoğraf indexi
+
+// Tek fotoğraf aç (eski çağrılar için)
 window.openLightbox = function(src, caption) {
-  const lb  = document.getElementById('lightbox');
-  const img = document.getElementById('lightbox-img');
-  const cap = document.getElementById('lightbox-caption');
-  img.src = src;
-  if (cap) cap.textContent = caption || '';
-  lb.classList.add('open');
+  // Sayfadaki tüm thumb'ları topla
+  const thumbs = [...document.querySelectorAll('.gallery-thumb[data-url]')];
+  if (thumbs.length) {
+    _lbImages = thumbs.map(t => ({ url: t.dataset.url, caption: t.dataset.caption || '' }));
+    const idx  = _lbImages.findIndex(i => i.url === src);
+    _lbIndex   = idx >= 0 ? idx : 0;
+  } else {
+    _lbImages = [{ url: src, caption: caption || '' }];
+    _lbIndex  = 0;
+  }
+  lbShow(_lbIndex);
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
 };
+
 window.closeLightbox = function() {
   document.getElementById('lightbox').classList.remove('open');
   document.getElementById('lightbox-img').src = '';
+  document.body.style.overflow = '';
 };
 
-// Tüm fotoğrafları sırayla göster
-window.openAllGallery = async function(btn) {
-  const sectionId = btn.dataset.sectionId;
-  // Detay sayfasındaki tüm thumb'ları topla
-  const thumbs = document.querySelectorAll('.gallery-thumb[data-url]');
-  if (thumbs.length) openLightbox(thumbs[0].dataset.url, thumbs[0].dataset.caption);
+// İleri / geri
+window.lbNav = function(dir) {
+  const next = _lbIndex + dir;
+  if (next < 0 || next >= _lbImages.length) return;
+  lbShow(next);
+};
+
+function lbShow(idx) {
+  _lbIndex = idx;
+  const img  = document.getElementById('lightbox-img');
+  const cap  = document.getElementById('lightbox-caption');
+  const prev = document.getElementById('lb-prev');
+  const next = document.getElementById('lb-next');
+  const ctr  = document.getElementById('lb-counter');
+  const dots = document.getElementById('lb-dots');
+
+  // Fade animasyonu
+  img.classList.add('fade');
+  setTimeout(() => {
+    img.src = _lbImages[idx].url;
+    img.onload = () => img.classList.remove('fade');
+  }, 150);
+
+  if (cap) cap.textContent = _lbImages[idx].caption || '';
+
+  // Ok butonları
+  if (prev) prev.disabled = idx === 0;
+  if (next) next.disabled = idx === _lbImages.length - 1;
+
+  // Sayaç
+  if (ctr && _lbImages.length > 1) {
+    ctr.textContent = `${idx + 1} / ${_lbImages.length}`;
+  }
+
+  // Dot'lar (max 12 göster)
+  if (dots && _lbImages.length > 1) {
+    const maxDots = 12;
+    if (_lbImages.length <= maxDots) {
+      dots.innerHTML = _lbImages.map((_, i) =>
+        `<button class="lightbox-dot${i===idx?' active':''}" onclick="lbShow(${i});event.stopPropagation()"></button>`
+      ).join('');
+    } else {
+      dots.innerHTML = '';
+    }
+  }
+}
+
+// Klavye desteği
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'Escape')     closeLightbox();
+});
+
+// Swipe desteği (dokunmatik)
+(function() {
+  let startX = 0;
+  const wrap = document.getElementById('lb-img-wrap');
+  if (!wrap) return;
+  wrap.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive:true });
+  wrap.addEventListener('touchend',   e => {
+    const diff = startX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
+  });
+})();
+
+// Tüm fotoğrafları aç (thumbnail grid'den)
+window.openAllGallery = function(btn) {
+  const thumbs = [...document.querySelectorAll('.gallery-thumb[data-url]')];
+  if (!thumbs.length) return;
+  _lbImages = thumbs.map(t => ({ url: t.dataset.url, caption: t.dataset.caption || '' }));
+  _lbIndex  = 0;
+  lbShow(0);
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
 };
 
 // ── SHARE ─────────────────────────────────────────────────
