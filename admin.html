@@ -194,6 +194,9 @@ select.form-control{cursor:pointer}
         <span id="pending-badge" style="margin-left:auto;background:var(--danger);color:#FFF;font-size:10px;padding:2px 7px;border-radius:10px;display:none"></span>
       </button>
     </nav>
+      <div class="nav-group-title">Sistem</div>
+      <button class="nav-link" onclick="showPanel('settings',this)"><i class="ti ti-settings"></i>Site Ayarları</button>
+    </div>
     <div class="sidebar-footer">
       <button class="nav-link" onclick="doLogout()" style="padding:8px 0;color:rgba(255,255,255,.7)"><i class="ti ti-logout"></i>Çıkış</button>
       <a href="index.html" target="_blank" class="nav-link" style="padding:8px 0;color:rgba(255,255,255,.7);text-decoration:none"><i class="ti ti-external-link"></i>Siteyi Gör</a>
@@ -367,6 +370,63 @@ select.form-control{cursor:pointer}
             <thead><tr><th>Ad</th><th>Bölüm</th><th>Yorum</th><th>Tarih</th><th>Durum</th><th>İşlem</th></tr></thead>
             <tbody id="comments-tbody"><tr><td colspan="6" class="loading-row"><span class="spinner"></span></td></tr></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AYARLAR -->
+    <div id="panel-settings" class="panel">
+      <div class="panel-header">
+        <div><div class="panel-title">Site Ayarları</div><div class="panel-subtitle">Ana sayfa istatistikleri ve genel ayarlar</div></div>
+      </div>
+      <div id="settings-alert"></div>
+
+      <div class="card">
+        <div class="card-header"><h3>📊 Ana Sayfa İstatistikleri</h3></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">
+            Muhtar ve şehit sayıları veritabanından otomatik hesaplanır.
+            Nüfus gibi manuel veriler buradan düzenlenir.
+          </p>
+
+          <!-- Nüfus -->
+          <div class="form-group">
+            <label class="form-label">Kayıtlı Nüfus</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="form-control" type="number" id="setting-nufus"
+                placeholder="5250" style="max-width:160px">
+              <button class="btn btn-primary btn-sm"
+                onclick="saveSettingUI('nufus', document.getElementById('setting-nufus').value)">
+                <i class="ti ti-check"></i> Kaydet
+              </button>
+            </div>
+            <div class="form-hint">Ana sayfada "Kayıtlı Nüfus" olarak gösterilir</div>
+          </div>
+
+          <!-- Otomatik hesaplanan -->
+          <div style="background:rgba(139,69,19,.05);border-radius:10px;padding:14px;margin-top:8px">
+            <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:10px">
+              <i class="ti ti-robot" style="margin-right:5px"></i>Otomatik Hesaplanan
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="auto-stats">
+              <div class="stat-box" style="padding:10px">
+                <div class="num" id="as-muhtar" style="font-size:20px">—</div>
+                <div class="lbl">Muhtar Sayısı</div>
+              </div>
+              <div class="stat-box" style="padding:10px">
+                <div class="num" id="as-sehit" style="font-size:20px">—</div>
+                <div class="lbl">Şehit Sayısı</div>
+              </div>
+              <div class="stat-box" style="padding:10px">
+                <div class="num" id="as-bolum" style="font-size:20px">—</div>
+                <div class="lbl">Görünür Bölüm</div>
+              </div>
+              <div class="stat-box" style="padding:10px">
+                <div class="num" id="as-yorum" style="font-size:20px">—</div>
+                <div class="lbl">Onaylı Yorum</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -630,7 +690,8 @@ import {
   getAudioFiles, uploadAudio, updateAudio, deleteAudio,
   uploadImage, updateImage, deleteImage, getGallery,
   getLinks, createLink, updateLink, deleteLink,
-  getAllComments, approveComment, pinComment, deleteComment
+  getAllComments, approveComment, pinComment, deleteComment,
+  getSiteSettings, updateSiteSetting
 } from './db.js';
 
 let sections = [];
@@ -766,6 +827,7 @@ window.showPanel = function(id, btn) {
 
   if (id === 'sections') loadSections();
   if (id === 'comments') loadComments('all');
+  if (id === 'settings') loadSettings();
 };
 
 // ── DASHBOARD ─────────────────────────────────────────────────
@@ -1427,6 +1489,50 @@ window.openLinkEditModal = function(id) {
 };
 
 // ── COMMENTS ─────────────────────────────────────────────────
+// ── AYARLAR ──────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const [settings, counts] = await Promise.all([
+      getSiteSettings(),
+      getStatCounts(),
+    ]);
+
+    // Nüfus
+    const nufusEl = document.getElementById('setting-nufus');
+    if (nufusEl) nufusEl.value = settings['nufus']?.value || '';
+
+    // Otomatik istatistikler
+    const map = {
+      'as-muhtar': counts.muhtarCount,
+      'as-sehit':  counts.sehitCount,
+      'as-bolum':  counts.sectionCount,
+      'as-yorum':  counts.commentCount,
+    };
+    Object.entries(map).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val ?? '—';
+    });
+  } catch(e) {
+    document.getElementById('settings-alert').innerHTML =
+      `<div class="alert alert-danger">Yüklenemedi: ${e.message}</div>`;
+  }
+}
+
+window.saveSettingUI = async function(key, value) {
+  const alertEl = document.getElementById('settings-alert');
+  if (!value && value !== '0') {
+    alertEl.innerHTML = '<div class="alert alert-danger">Değer boş olamaz.</div>';
+    return;
+  }
+  try {
+    await updateSiteSetting(key, String(value));
+    alertEl.innerHTML = '<div class="alert alert-success">✅ Kaydedildi! Ana sayfada güncel değer görünecek.</div>';
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+};
+
 window.loadComments = async function(filter = 'all') {
   const tbody = document.getElementById('comments-tbody');
   tbody.innerHTML = '<tr><td colspan="6" class="loading-row"><span class="spinner"></span></td></tr>';
