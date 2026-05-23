@@ -625,7 +625,7 @@ select.form-control{cursor:pointer}
 import {
   supabase,
   signIn, signOut, getSession, onAuthChange,
-  getSections, createSection, updateSection, deleteSection,
+  getSections, getAllSections, createSection, updateSection, deleteSection,
   getContentBlocks, createBlock, updateBlock, deleteBlock,
   getAudioFiles, uploadAudio, updateAudio, deleteAudio,
   uploadImage, updateImage, deleteImage, getGallery,
@@ -747,7 +747,7 @@ document.getElementById('login-pass').addEventListener('keydown', e => {
 
 // ── MASTER DATA ───────────────────────────────────────────────
 async function loadMasterData() {
-  sections = await getSections();
+  sections = await getAllSections(); // Admin: gizli bölümler de görünsün
   // Populate all section selects
   const opts = sections.map(s => `<option value="${s.id}">${s.title}</option>`).join('');
   ['content-section-filter','audio-section-filter','gallery-section-filter',
@@ -830,7 +830,7 @@ window.quickDelete = async function(id) {
 async function loadSections() {
   const tbody = document.getElementById('sections-tbody');
   tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>';
-  const data = await getSections();
+  const data = await getAllSections(); // Admin: gizli bölümler de görünsün
   _allSections = data;
   renderSectionsTable(data);
 }
@@ -847,7 +847,7 @@ function renderSectionsTable(data) {
     const isFirst = idx === 0;
     const isLast  = idx === data.length - 1;
     const sEnc    = encodeURIComponent(JSON.stringify(s));
-    return `<tr>
+    return `<tr style="${!s.is_visible ? 'opacity:.5' : ''}">
       <td style="font-weight:700;color:var(--primary);text-align:center;width:36px">${idx + 1}</td>
       <td>
         <strong style="font-size:13px">${s.title}</strong>
@@ -857,7 +857,7 @@ function renderSectionsTable(data) {
       <td>
         ${s.is_visible
           ? '<span class="badge badge-green">Görünür</span>'
-          : '<span class="badge badge-red">Gizli</span>'}
+          : '<span class="badge badge-red" title="Sitede gizli — admin panelinde görünür">Gizli</span>'}
         ${s.comments_enabled === false
           ? '<span class="badge badge-yellow" style="margin-top:3px;display:block">Yorum Kapalı</span>'
           : ''}
