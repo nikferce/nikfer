@@ -255,6 +255,17 @@ export async function uploadAudio(sectionId, file, title) {
   return data;
 }
 
+export async function updateAudio(id, payload) {
+  const { data, error } = await supabase
+    .from('audio_files')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteAudio(id, filePath) {
   await supabase.storage.from('nikfer-media').remove([filePath]);
   const { error } = await supabase.from('audio_files').delete().eq('id', id);
@@ -284,6 +295,17 @@ export async function uploadImage(sectionId, file, title, caption) {
   return data;
 }
 
+export async function updateImage(id, payload) {
+  const { data, error } = await supabase
+    .from('gallery')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function deleteImage(id, filePath) {
   await supabase.storage.from('nikfer-media').remove([filePath]);
   const { error } = await supabase.from('gallery').delete().eq('id', id);
@@ -296,6 +318,17 @@ export async function createLink(payload) {
   const { data, error } = await supabase
     .from('links')
     .insert(payload)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLink(id, payload) {
+  const { data, error } = await supabase
+    .from('links')
+    .update(payload)
+    .eq('id', id)
     .select()
     .single();
   if (error) throw error;
