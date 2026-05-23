@@ -256,9 +256,18 @@ textarea.form-input{resize:none;min-height:72px}
       </div>
     </div>
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-num">5.250</div><div class="stat-lbl">Kayıtlı Nüfus</div></div>
-      <div class="stat-card"><div class="stat-num">15</div><div class="stat-lbl">Muhtar 1842–</div></div>
-      <div class="stat-card"><div class="stat-num">12</div><div class="stat-lbl">Çanakkale Şehidi</div></div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-nufus">—</div>
+        <div class="stat-lbl">Kayıtlı Nüfus</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-muhtar">—</div>
+        <div class="stat-lbl">Muhtar 1842–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-sehit">—</div>
+        <div class="stat-lbl">Çanakkale Şehidi</div>
+      </div>
     </div>
     <div class="sec-title">Bölümler</div>
     <div class="menu-grid" id="sections-grid">
@@ -429,6 +438,7 @@ textarea.form-input{resize:none;min-height:72px}
 import {
   getSections, getSectionWithContent,
   getFeaturedSections, getRecentComments,
+  getSiteSettings, getStatCounts,
   getApprovedComments, submitComment,
   subscribeComments
 } from './db.js';
@@ -441,6 +451,7 @@ let currentDetail = null;
 // ── INIT ───────────────────────────────────────────────────
 async function init() {
   await loadSectionsGrid();
+  loadStats();
   loadFeaturedSections();
   loadRecentComments();
   await loadComments();
@@ -450,6 +461,44 @@ async function init() {
 }
 
 // ── SECTIONS GRID ──────────────────────────────────────────
+// ── İSTATİSTİKLER ────────────────────────────────────────────
+async function loadStats() {
+  try {
+    // Paralel çek
+    const [settings, counts] = await Promise.all([
+      getSiteSettings(),
+      getStatCounts(),
+    ]);
+
+    // Nüfus — admin'den düzenlenebilir
+    const nufusEl = document.getElementById('stat-nufus');
+    if (nufusEl) {
+      const nufus = settings['nufus']?.value || '—';
+      nufusEl.textContent = Number(nufus).toLocaleString('tr-TR');
+    }
+
+    // Muhtar sayısı — otomatik
+    const muhtarEl = document.getElementById('stat-muhtar');
+    if (muhtarEl) muhtarEl.textContent = counts.muhtarCount || '—';
+
+    // Şehit sayısı — otomatik
+    const sehitEl = document.getElementById('stat-sehit');
+    if (sehitEl) sehitEl.textContent = counts.sehitCount || '—';
+
+  } catch(e) {
+    // Hata durumunda sabit değerleri göster
+    const fallbacks = {
+      'stat-nufus':  '5.250',
+      'stat-muhtar': '15',
+      'stat-sehit':  '12',
+    };
+    Object.entries(fallbacks).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    });
+  }
+}
+
 // ── ÖĞNE ÇIKAN BÖLÜMLER ──────────────────────────────────────
 async function loadFeaturedSections() {
   const wrap = document.getElementById('featured-wrap');
