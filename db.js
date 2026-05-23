@@ -202,30 +202,50 @@ export async function updateSiteSetting(key, value) {
 
 // Otomatik istatistikler — gerçek veriden hesapla
 export async function getStatCounts() {
-  const [
-    { count: sectionCount },
-    { count: muhtarCount  },
-    { count: sehitCount   },
-    { count: commentCount },
-  ] = await Promise.all([
+  // Önce slug -> id eşleştirmesi yap
+  const { data: slugs } = await supabase
+    .from('sections')
+    .select('id, slug')
+    .in('slug', ['muhtarlar', 'canakkale']);
+
+  const muhtarId  = slugs?.find(s => s.slug === 'muhtarlar')?.id || null;
+  const canakkaleId = slugs?.find(s => s.slug === 'canakkale')?.id || null;
+
+  // Paralel count sorguları — subquery yok, direkt eq kullan
+  const queries = [
     supabase.from('sections')
       .select('*', { count:'exact', head:true })
       .eq('is_visible', true),
-    supabase.from('content_blocks')
-      .select('*', { count:'exact', head:true })
-      .eq('type', 'table_row')
-      .filter('section_id', 'in',
-        `(SELECT id FROM sections WHERE slug = 'muhtarlar')`),
-    supabase.from('content_blocks')
-      .select('*', { count:'exact', head:true })
-      .eq('type', 'table_row')
-      .filter('section_id', 'in',
-        `(SELECT id FROM sections WHERE slug = 'canakkale')`),
     supabase.from('comments')
       .select('*', { count:'exact', head:true })
       .eq('is_approved', true),
-  ]);
-  return { sectionCount, muhtarCount, sehitCount, commentCount };
+  ];
+
+  if (muhtarId) {
+    queries.push(
+      supabase.from('content_blocks')
+        .select('*', { count:'exact', head:true })
+        .eq('type', 'table_row')
+        .eq('section_id', muhtarId)
+    );
+  }
+  if (canakkaleId) {
+    queries.push(
+      supabase.from('content_blocks')
+        .select('*', { count:'exact', head:true })
+        .eq('type', 'table_row')
+        .eq('section_id', canakkaleId)
+    );
+  }
+
+  const results = await Promise.all(queries);
+
+  return {
+    sectionCount: results[0]?.count ?? 0,
+    commentCount: results[1]?.count ?? 0,
+    muhtarCount:  muhtarId  ? (results[2]?.count ?? 0) : 0,
+    sehitCount:   canakkaleId ? (results[muhtarId ? 3 : 2]?.count ?? 0) : 0,
+  };
 }
 
 // ── AUTH ─────────────────────────────────────────────────────
