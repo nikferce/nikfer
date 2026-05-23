@@ -202,50 +202,56 @@ export async function updateSiteSetting(key, value) {
 
 // Otomatik istatistikler — gerçek veriden hesapla
 export async function getStatCounts() {
-  // Önce slug -> id eşleştirmesi yap
-  const { data: slugs } = await supabase
-    .from('sections')
-    .select('id, slug')
-    .in('slug', ['muhtarlar', 'canakkale']);
+  try {
+    // Adım 1: slug → id eşleştirmesi
+    const { data: slugData, error: slugErr } = await supabase
+      .from('sections')
+      .select('id, slug')
+      .in('slug', ['muhtarlar', 'canakkale']);
 
-  const muhtarId  = slugs?.find(s => s.slug === 'muhtarlar')?.id || null;
-  const canakkaleId = slugs?.find(s => s.slug === 'canakkale')?.id || null;
+    if (slugErr) throw slugErr;
 
-  // Paralel count sorguları — subquery yok, direkt eq kullan
-  const queries = [
-    supabase.from('sections')
-      .select('*', { count:'exact', head:true })
-      .eq('is_visible', true),
-    supabase.from('comments')
-      .select('*', { count:'exact', head:true })
-      .eq('is_approved', true),
-  ];
+    const muhtarId    = slugData?.find(s => s.slug === 'muhtarlar')?.id || null;
+    const canakkaleId = slugData?.find(s => s.slug === 'canakkale')?.id || null;
 
-  if (muhtarId) {
-    queries.push(
-      supabase.from('content_blocks')
-        .select('*', { count:'exact', head:true })
+    // Adım 2: Her sorguyu ayrı ayrı çalıştır
+    const { count: sectionCount } = await supabase
+      .from('sections')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_visible', true);
+
+    const { count: commentCount } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_approved', true);
+
+    let muhtarCount  = 0;
+    let sehitCount   = 0;
+
+    if (muhtarId) {
+      const { count } = await supabase
+        .from('content_blocks')
+        .select('*', { count: 'exact', head: true })
         .eq('type', 'table_row')
-        .eq('section_id', muhtarId)
-    );
-  }
-  if (canakkaleId) {
-    queries.push(
-      supabase.from('content_blocks')
-        .select('*', { count:'exact', head:true })
+        .eq('section_id', muhtarId);
+      muhtarCount = count ?? 0;
+    }
+
+    if (canakkaleId) {
+      const { count } = await supabase
+        .from('content_blocks')
+        .select('*', { count: 'exact', head: true })
         .eq('type', 'table_row')
-        .eq('section_id', canakkaleId)
-    );
+        .eq('section_id', canakkaleId);
+      sehitCount = count ?? 0;
+    }
+
+    return { sectionCount, commentCount, muhtarCount, sehitCount };
+
+  } catch(e) {
+    console.error('getStatCounts hatası:', e);
+    return { sectionCount: 0, commentCount: 0, muhtarCount: 0, sehitCount: 0 };
   }
-
-  const results = await Promise.all(queries);
-
-  return {
-    sectionCount: results[0]?.count ?? 0,
-    commentCount: results[1]?.count ?? 0,
-    muhtarCount:  muhtarId  ? (results[2]?.count ?? 0) : 0,
-    sehitCount:   canakkaleId ? (results[muhtarId ? 3 : 2]?.count ?? 0) : 0,
-  };
 }
 
 // ── AUTH ─────────────────────────────────────────────────────
