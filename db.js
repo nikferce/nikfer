@@ -179,6 +179,55 @@ export function subscribeComments(sectionId, callback) {
     .subscribe();
 }
 
+// ── SITE SETTINGS ────────────────────────────────────────────
+
+export async function getSiteSettings() {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .select('*');
+  if (error) throw error;
+  // key:value objesi döndür
+  return Object.fromEntries(data.map(r => [r.key, r]));
+}
+
+export async function updateSiteSetting(key, value) {
+  const { data, error } = await supabase
+    .from('site_settings')
+    .upsert({ key, value })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Otomatik istatistikler — gerçek veriden hesapla
+export async function getStatCounts() {
+  const [
+    { count: sectionCount },
+    { count: muhtarCount  },
+    { count: sehitCount   },
+    { count: commentCount },
+  ] = await Promise.all([
+    supabase.from('sections')
+      .select('*', { count:'exact', head:true })
+      .eq('is_visible', true),
+    supabase.from('content_blocks')
+      .select('*', { count:'exact', head:true })
+      .eq('type', 'table_row')
+      .filter('section_id', 'in',
+        `(SELECT id FROM sections WHERE slug = 'muhtarlar')`),
+    supabase.from('content_blocks')
+      .select('*', { count:'exact', head:true })
+      .eq('type', 'table_row')
+      .filter('section_id', 'in',
+        `(SELECT id FROM sections WHERE slug = 'canakkale')`),
+    supabase.from('comments')
+      .select('*', { count:'exact', head:true })
+      .eq('is_approved', true),
+  ]);
+  return { sectionCount, muhtarCount, sehitCount, commentCount };
+}
+
 // ── AUTH ─────────────────────────────────────────────────────
 
 export async function signIn(email, password) {
