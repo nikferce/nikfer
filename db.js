@@ -18,6 +18,16 @@ export async function getSections() {
   return data;
 }
 
+// Admin için — gizli bölümler de dahil tümünü getirir
+export async function getAllSections() {
+  const { data, error } = await supabase
+    .from('sections')
+    .select('*')
+    .order('sort_order');
+  if (error) throw error;
+  return data;
+}
+
 export async function getFeaturedSections() {
   const { data, error } = await supabase
     .from('sections')
