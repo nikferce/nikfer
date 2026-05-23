@@ -415,6 +415,17 @@ select.form-control{cursor:pointer}
           <span class="form-label" style="margin:0">Görünür (sitede göster)</span>
         </label>
       </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="section-comments" checked>
+          <span class="form-label" style="margin:0">
+            Yoruma Açık
+            <span style="font-size:10px;font-weight:400;color:var(--text-muted);display:block;margin-top:1px">
+              Kapatırsanız bu bölümde yorum formu görünmez
+            </span>
+          </span>
+        </label>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('section-modal')">İptal</button>
@@ -832,9 +843,14 @@ function renderSectionsTable(data) {
         <div style="font-size:11px;color:var(--text-muted)">${s.subtitle||''}</div>
       </td>
       <td><code style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px">${s.slug}</code></td>
-      <td>${s.is_visible
-        ? '<span class="badge badge-green">Görünür</span>'
-        : '<span class="badge badge-red">Gizli</span>'}</td>
+      <td>
+        ${s.is_visible
+          ? '<span class="badge badge-green">Görünür</span>'
+          : '<span class="badge badge-red">Gizli</span>'}
+        ${s.comments_enabled === false
+          ? '<span class="badge badge-yellow" style="margin-top:3px;display:block">Yorum Kapalı</span>'
+          : ''}
+      </td>
       <td>
         <div style="display:flex;gap:3px;align-items:center">
           <button class="btn btn-ghost btn-sm btn-icon" title="Yukarı"
@@ -909,13 +925,15 @@ window.editSectionById = function(sectionId) {
 
 window.editSection = function(s) {
   document.getElementById('section-modal-title').textContent = 'Bölümü Düzenle';
-  document.getElementById('section-id').value       = s.id;
-  document.getElementById('section-title').value    = s.title;
-  document.getElementById('section-subtitle').value = s.subtitle || '';
-  document.getElementById('section-slug').value     = s.slug;
-  document.getElementById('section-icon').value     = s.icon || '';
-  document.getElementById('section-sort').value     = s.sort_order;
-  document.getElementById('section-visible').checked = s.is_visible;
+  document.getElementById('section-id').value              = s.id;
+  document.getElementById('section-title').value           = s.title;
+  document.getElementById('section-subtitle').value        = s.subtitle || '';
+  document.getElementById('section-slug').value            = s.slug;
+  document.getElementById('section-icon').value            = s.icon || '';
+  document.getElementById('section-sort').value            = s.sort_order;
+  document.getElementById('section-visible').checked       = s.is_visible;
+  document.getElementById('section-comments').checked      =
+    s.comments_enabled !== false; // null/undefined ise true kabul et
   openModal('section-modal');
 };
 
@@ -923,12 +941,13 @@ window.saveSectionUI = async function() {
   const id    = document.getElementById('section-id').value;
   const alert = document.getElementById('section-modal-alert');
   const payload = {
-    title:      document.getElementById('section-title').value.trim(),
-    subtitle:   document.getElementById('section-subtitle').value.trim(),
-    slug:       document.getElementById('section-slug').value.trim().toLowerCase().replace(/\s+/g,'-'),
-    icon:       document.getElementById('section-icon').value.trim(),
-    sort_order: parseInt(document.getElementById('section-sort').value)||0,
-    is_visible: document.getElementById('section-visible').checked,
+    title:            document.getElementById('section-title').value.trim(),
+    subtitle:         document.getElementById('section-subtitle').value.trim(),
+    slug:             document.getElementById('section-slug').value.trim().toLowerCase().replace(/\s+/g,'-'),
+    icon:             document.getElementById('section-icon').value.trim(),
+    sort_order:       parseInt(document.getElementById('section-sort').value)||0,
+    is_visible:       document.getElementById('section-visible').checked,
+    comments_enabled: document.getElementById('section-comments').checked,
   };
   if (!payload.title || !payload.slug) {
     alert.innerHTML = '<div class="alert alert-danger">Başlık ve slug zorunludur.</div>'; return;
