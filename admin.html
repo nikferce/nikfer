@@ -735,7 +735,11 @@ function setEditorMode(type) {
 function syncQuillToTextarea() {
   const type = document.getElementById('block-type').value;
   if (RICH_TEXT_TYPES.includes(type)) {
-    const val = document.getElementById('rte-source').value.trim();
+    let val = document.getElementById('rte-source').value.trim();
+    // Boş satır (2+ enter) = paragraf bölümü
+    val = val.replace(/\n{2,}/g, '</p><p>');
+    // Tek satır sonu = <br>
+    val = val.replace(/\n/g, '<br>');
     document.getElementById('block-content').value = val;
   } else {
     document.getElementById('block-content').value =
@@ -747,7 +751,11 @@ function syncQuillToTextarea() {
 function fillEditor(type, value) {
   setEditorMode(type);
   if (RICH_TEXT_TYPES.includes(type)) {
-    document.getElementById('rte-source').value = value || '';
+    // Kaydedilen </p><p> ve <br> formatını editör için satır sonuna çevir
+    let display = value || '';
+    display = display.replace(/<\/p><p>/gi, '\n\n');
+    display = display.replace(/<br\s*\/?>/gi, '\n');
+    document.getElementById('rte-source').value = display;
     if (_rteMode === 'preview') rteShowPreview();
   } else {
     document.getElementById('block-content-plain').value = value || '';
