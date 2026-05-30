@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🏡</text></svg>">
 <meta name="robots" content="noindex, nofollow">
 <title>Nikfer Belleği — Admin</title>
@@ -122,18 +121,22 @@ select.form-control{cursor:pointer}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-row{text-align:center;padding:30px;color:var(--text-muted);font-size:13px}
-/* Quill Editor Özelleştirme */
-.quill-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
-.quill-wrap .ql-toolbar{border:none;border-bottom:1px solid var(--border);background:#faf7f2;padding:6px 8px;flex-wrap:wrap}
-.quill-wrap .ql-toolbar .ql-formats{margin-right:8px}
-.quill-wrap .ql-container{border:none;font-size:13px;min-height:120px;max-height:320px;overflow-y:auto}
-.quill-wrap .ql-editor{padding:10px 12px;line-height:1.8;color:var(--text)}
-.quill-wrap .ql-editor p{margin-bottom:6px}
+/* Özel İçerik Editörü */
+.rte-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.rte-toolbar{border-bottom:1px solid var(--border);background:#faf7f2;padding:6px 8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.rte-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--text);transition:all .15s;display:flex;align-items:center;gap:3px}
+.rte-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
+.rte-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.rte-btn i{font-size:14px}
+.rte-divider{width:1px;height:20px;background:var(--border);margin:0 2px}
+.rte-source{width:100%;min-height:120px;max-height:320px;border:none;outline:none;padding:10px 12px;font-size:13px;font-family:monospace;line-height:1.8;color:var(--text);resize:vertical;background:#fff}
+.rte-preview{min-height:120px;max-height:320px;overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.8;color:var(--text)}
+.rte-preview b,.rte-preview strong{font-weight:700}
+.rte-preview i,.rte-preview em{font-style:italic}
+.rte-preview a{color:var(--primary);text-decoration:underline}
+.rte-mode-badge{font-size:10px;color:var(--text-muted);margin-left:auto;padding:2px 8px;background:rgba(139,69,19,.06);border-radius:10px}
 #block-content{display:none}
 .plain-editor{display:block}
-.quill-wrap{display:none}
-.show-quill .quill-wrap{display:block}
-.show-quill #block-content-plain{display:none}
 
 /* MOBILE RESPONSIVE */
 @media(max-width:768px){
@@ -544,9 +547,25 @@ select.form-control{cursor:pointer}
         <!-- Düz metin alanı (şiir, tablo, kod vb. için) -->
         <textarea class="form-control plain-editor" id="block-content-plain" rows="5"
           placeholder="İçeriği buraya yazın..."></textarea>
-        <!-- Zengin metin editörü (paragraf, alıntı, madde için) -->
-        <div class="quill-wrap">
-          <div id="quill-editor"></div>
+        <!-- Özel zengin metin editörü (paragraf, alıntı, madde için) -->
+        <div class="rte-wrap" id="rte-wrap" style="display:none">
+          <div class="rte-toolbar">
+            <button type="button" class="rte-btn" onclick="rteFormat('bold')" title="Kalın"><i class="ti ti-bold"></i></button>
+            <button type="button" class="rte-btn" onclick="rteFormat('italic')" title="İtalik"><i class="ti ti-italic"></i></button>
+            <button type="button" class="rte-btn" onclick="rteFormat('underline')" title="Altı Çizili"><i class="ti ti-underline"></i></button>
+            <div class="rte-divider"></div>
+            <button type="button" class="rte-btn" onclick="rteLink()" title="Link ekle"><i class="ti ti-link"></i></button>
+            <button type="button" class="rte-btn" onclick="rteClear()" title="Formatı temizle"><i class="ti ti-clear-formatting"></i></button>
+            <div class="rte-divider"></div>
+            <button type="button" class="rte-btn" id="rte-toggle-btn" onclick="rteToggleMode()" title="Kaynak / Önizleme">
+              <i class="ti ti-code"></i> Kaynak
+            </button>
+            <span class="rte-mode-badge" id="rte-mode-badge">Görsel Mod</span>
+          </div>
+          <!-- Kaynak modu -->
+          <textarea class="rte-source" id="rte-source" placeholder="HTML içerik buraya..."></textarea>
+          <!-- Önizleme modu -->
+          <div class="rte-preview" id="rte-preview" style="display:none"></div>
         </div>
         <!-- Gizli alan — her zaman ham değeri saklar -->
         <textarea id="block-content" style="display:none"></textarea>
@@ -680,7 +699,6 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script type="module">
 import {
   supabase,
@@ -697,53 +715,28 @@ import {
 let sections = [];
 let currentSection = null;
 
-// ── AUTH ─────────────────────────────────────────────────────
-// ── QUILL EDITOR ─────────────────────────────────────────────
-let quillInstance = null;
-
-function initQuill() {
-  if (quillInstance) return; // Zaten başlatılmış
-  quillInstance = new Quill('#quill-editor', {
-    theme: 'snow',
-    placeholder: 'Paragraf metnini buraya yazın...',
-    modules: {
-      toolbar: [
-        [{ 'header': [2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ 'color': [] }, { 'background': [] }],
-        [{ 'size': ['small', false, 'large', 'huge'] }],
-        ['blockquote'],
-        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-        [{ 'align': [] }],
-        ['link'],
-        ['clean']
-      ]
-    }
-  });
-}
-
-// Zengin editör mi düz metin mi gösterileceğini belirle
+// ── ÖZEL İÇERİK EDİTÖRÜ (RTE) ───────────────────────────────
 const RICH_TEXT_TYPES = ['paragraph', 'quote', 'list_item', 'heading'];
+let _rteMode = 'source'; // 'source' | 'preview'
 
 function setEditorMode(type) {
-  const group   = document.getElementById('block-content-group');
-  const plain   = document.getElementById('block-content-plain');
+  const plain  = document.getElementById('block-content-plain');
+  const rteWrap = document.getElementById('rte-wrap');
   if (RICH_TEXT_TYPES.includes(type)) {
-    group.classList.add('show-quill');
-    initQuill();
+    plain.style.display   = 'none';
+    rteWrap.style.display = 'block';
   } else {
-    group.classList.remove('show-quill');
+    plain.style.display   = 'block';
+    rteWrap.style.display = 'none';
   }
 }
 
-// Quill içeriğini gizli textarea'ya senkronize et (kaydetmeden önce)
+// Kaydet butonuna basılmadan önce değeri gizli alana yaz
 function syncQuillToTextarea() {
   const type = document.getElementById('block-type').value;
-  if (RICH_TEXT_TYPES.includes(type) && quillInstance) {
-    const html = quillInstance.getSemanticHTML();
-    // Sadece içerik varsa al; boş paragraf bırakma
-    const clean = html === '<p></p>' || html === '<p><br></p>' ? '' : html;
-    document.getElementById('block-content').value = clean;
+  if (RICH_TEXT_TYPES.includes(type)) {
+    const val = document.getElementById('rte-source').value.trim();
+    document.getElementById('block-content').value = val;
   } else {
     document.getElementById('block-content').value =
       document.getElementById('block-content-plain').value;
@@ -752,20 +745,89 @@ function syncQuillToTextarea() {
 
 // Editörü doldur (düzenle modunda)
 function fillEditor(type, value) {
+  setEditorMode(type);
   if (RICH_TEXT_TYPES.includes(type)) {
-    setEditorMode(type);
-    if (quillInstance) {
-      if (value && value.trim().startsWith('<')) {
-        quillInstance.clipboard.dangerouslyPasteHTML(value);
-      } else {
-        quillInstance.setText(value || '');
-      }
-    }
+    document.getElementById('rte-source').value = value || '';
+    if (_rteMode === 'preview') rteShowPreview();
   } else {
-    setEditorMode(type);
     document.getElementById('block-content-plain').value = value || '';
   }
 }
+
+// Kaynak / Önizleme toggle
+window.rteToggleMode = function() {
+  const src     = document.getElementById('rte-source');
+  const preview = document.getElementById('rte-preview');
+  const btn     = document.getElementById('rte-toggle-btn');
+  const badge   = document.getElementById('rte-mode-badge');
+
+  if (_rteMode === 'source') {
+    _rteMode = 'preview';
+    src.style.display     = 'none';
+    preview.style.display = 'block';
+    preview.innerHTML     = src.value || '<span style="color:var(--text-muted);font-size:12px">İçerik yok</span>';
+    btn.innerHTML   = '<i class="ti ti-edit"></i> Düzenle';
+    badge.textContent = 'Önizleme Modu';
+    btn.classList.add('active');
+  } else {
+    _rteMode = 'source';
+    src.style.display     = 'block';
+    preview.style.display = 'none';
+    btn.innerHTML   = '<i class="ti ti-code"></i> Kaynak';
+    badge.textContent = 'Kaynak Modu';
+    btn.classList.remove('active');
+  }
+};
+
+function rteShowPreview() {
+  const src     = document.getElementById('rte-source');
+  const preview = document.getElementById('rte-preview');
+  preview.innerHTML = src.value || '';
+}
+
+// Format butonları — seçili metne tag sarar
+window.rteFormat = function(tag) {
+  const ta  = document.getElementById('rte-source');
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.substring(start, end);
+
+  const tagMap = { bold: 'b', italic: 'i', underline: 'u' };
+  const t = tagMap[tag];
+  if (!t) return;
+
+  const wrapped = sel ? `<${t}>${sel}</${t}>` : `<${t}></${t}>`;
+  ta.setRangeText(wrapped, start, end, 'end');
+  ta.focus();
+};
+
+// Link ekle
+window.rteLink = function() {
+  const ta    = document.getElementById('rte-source');
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.substring(start, end);
+  const url   = prompt('Link URL:', 'https://');
+  if (!url) return;
+  const text    = sel || url;
+  const wrapped = `<a href="${url}" target="_blank">${text}</a>`;
+  ta.setRangeText(wrapped, start, end, 'end');
+  ta.focus();
+};
+
+// Format temizle — basit HTML etiketlerini kaldır
+window.rteClear = function() {
+  const ta    = document.getElementById('rte-source');
+  const start = ta.selectionStart;
+  const end   = ta.selectionEnd;
+  const sel   = ta.value.substring(start, end);
+  if (!sel) return;
+  const clean = sel.replace(/<[^>]+>/g, '');
+  ta.setRangeText(clean, start, end, 'end');
+  ta.focus();
+};
+
+
 
 onAuthChange((event, session) => {
   if (session) showAdmin();
@@ -1177,7 +1239,7 @@ window.openBlockModal = function() {
   document.getElementById('block-content-plain').value  = '';
   document.getElementById('block-meta').value           = '';
   document.getElementById('block-type').value           = 'paragraph';
-  if (quillInstance) quillInstance.setContents([]);
+  document.getElementById('rte-source').value           = '';
   onBlockTypeChange();
   if (_currentSectionId) {
     document.getElementById('block-section-id').value = _currentSectionId;
@@ -1228,7 +1290,7 @@ window.onBlockTypeChange = function() {
 };
 
 window.saveBlockUI = async function() {
-  syncQuillToTextarea(); // Quill içeriğini textarea'ya aktar
+  syncQuillToTextarea(); // Editör içeriğini textarea'ya aktar
   const id      = document.getElementById('block-id').value;
   const alert   = document.getElementById('block-modal-alert');
   let meta = {};
