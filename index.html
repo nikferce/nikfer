@@ -137,9 +137,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .blk-info-val{font-size:12px;font-weight:600;color:var(--text);text-align:right;max-width:58%}
 .blk-list-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text);line-height:1.5}
 .blk-list-item:last-child{border-bottom:none}
-.blk-list-item:not(.bilmece):not(.with-desc)::before{content:'•';color:var(--accent);flex-shrink:0;font-size:16px;line-height:1.4}
-.blk-list-item.bilmece{flex-direction:column;gap:4px;cursor:pointer}
-.blk-list-item.with-desc{flex-direction:column;gap:2px}
+.blk-list-bullet{color:var(--accent);flex-shrink:0;font-size:16px;line-height:1.4}
+.blk-list-item.bilmece{gap:8px;cursor:pointer}
+.blk-list-item.with-desc{gap:8px}
 .bilmece-q{font-weight:600}
 .bilmece-a{background:rgba(139,69,19,.06);border-radius:6px;padding:5px 10px;font-size:12px;color:var(--primary);display:none}
 .bilmece-a.open{display:block}
@@ -842,23 +842,29 @@ function renderBlock(b) {
       return `<div class="blk-note"><i class="ti ti-info-circle" style="margin-right:4px"></i>${b.content}</div>`;
     case 'list_item':
       if (m.answer !== undefined) {
-        // Bilmece — bullet yok, column layout
+        // Bilmece — bullet + column layout
         const bid = `b-${b.id}`;
         return `<div class="blk-list-item bilmece" data-bid="${bid}">
-          <div class="bilmece-q">${b.content}</div>
-          <div class="bilmece-a" id="${bid}">Cevap: ${m.answer}</div>
-          <button class="bilmece-btn" onclick="toggleBilmece('${bid}',this)">Cevabı gör</button>
+          <span class="blk-list-bullet">•</span>
+          <div style="flex:1">
+            <div class="bilmece-q">${b.content}</div>
+            <div class="bilmece-a" id="${bid}">Cevap: ${m.answer}</div>
+            <button class="bilmece-btn" onclick="toggleBilmece('${bid}',this)">Cevabı gör</button>
+          </div>
         </div>`;
       }
       if (m.desc) {
-        // İsim listesi — bullet yok, column layout
+        // İsim listesi — bullet + column layout
         return `<div class="blk-list-item with-desc">
-          <span style="font-weight:600">${b.content}</span>
-          <span style="font-size:11px;color:var(--text-muted)">${m.desc}</span>
+          <span class="blk-list-bullet">•</span>
+          <div style="flex:1">
+            <div style="font-weight:600">${b.content}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${m.desc}</div>
+          </div>
         </div>`;
       }
-      // Normal madde — bullet var
-      return `<div class="blk-list-item">${b.content}</div>`;
+      // Normal madde
+      return `<div class="blk-list-item"><span class="blk-list-bullet">•</span><span>${b.content}</span></div>`;
     case 'divider':
       return `<hr class="blk-divider">`;
     default:
