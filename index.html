@@ -818,6 +818,13 @@ function renderBlock(b) {
       // Eski Quill'den gelen <p>...</p> sarmalayıcıları temizle
       let txt = b.content || '';
       txt = txt.replace(/^<p>([\s\S]*)<\/p>$/i, '$1').trim();
+      // Çoklu paragraf varsa her birini ayrı render et
+      if (txt.includes('</p><p>')) {
+        return txt.split('</p><p>')
+          .filter(p => p.trim())
+          .map(p => `<p class="blk-paragraph">${p}</p>`)
+          .join('');
+      }
       return `<p class="blk-paragraph">${txt}</p>`;
     }
     case 'heading':
