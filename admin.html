@@ -787,7 +787,10 @@ function rteShowPreview() {
 
 // Format butonları — seçili metne tag sarar
 window.rteFormat = function(tag) {
-  const ta  = document.getElementById('rte-source');
+  // Önizleme modundaysa kaynak moda geç
+  if (_rteMode === 'preview') rteToggleMode();
+
+  const ta    = document.getElementById('rte-source');
   const start = ta.selectionStart;
   const end   = ta.selectionEnd;
   const sel   = ta.value.substring(start, end);
@@ -803,6 +806,9 @@ window.rteFormat = function(tag) {
 
 // Link ekle
 window.rteLink = function() {
+  // Önizleme modundaysa kaynak moda geç
+  if (_rteMode === 'preview') rteToggleMode();
+
   const ta    = document.getElementById('rte-source');
   const start = ta.selectionStart;
   const end   = ta.selectionEnd;
@@ -817,6 +823,9 @@ window.rteLink = function() {
 
 // Format temizle — basit HTML etiketlerini kaldır
 window.rteClear = function() {
+  // Önizleme modundaysa kaynak moda geç
+  if (_rteMode === 'preview') rteToggleMode();
+
   const ta    = document.getElementById('rte-source');
   const start = ta.selectionStart;
   const end   = ta.selectionEnd;
