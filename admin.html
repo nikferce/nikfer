@@ -439,18 +439,39 @@ select.form-control{cursor:pointer}
     <div id="panel-backup" class="panel">
       <div class="panel-header">
         <div>
-          <div class="panel-title">Yedek Al</div>
-          <div class="panel-subtitle">Tüm içeriği JSON formatında indirin</div>
+          <div class="panel-title">Yedek Al / Yükle</div>
+          <div class="panel-subtitle">Tüm içeriği JSON formatında indirin veya geri yükleyin</div>
         </div>
         <button class="btn btn-primary" onclick="runBackup()">
           <i class="ti ti-database-export"></i> Şimdi Yedekle
         </button>
       </div>
+
       <div class="alert" style="background:rgba(41,128,185,.08);color:#1A5276;border:1px solid rgba(41,128,185,.2);margin-bottom:16px">
         <i class="ti ti-info-circle" style="margin-right:6px"></i>
         Yedek; bölümler, içerik blokları, yorumlar, ses dosyaları, galeri ve linkleri kapsar.
         Dosyalar (görseller, sesler) Supabase Storage'da kalır — bu yedek yalnızca <strong>veritabanı kayıtlarını</strong> içerir.
       </div>
+
+      <!-- Yedek yükle -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><h3><i class="ti ti-database-import" style="margin-right:6px"></i>Yedek Yükle</h3></div>
+        <div class="card-body">
+          <div class="alert" style="background:rgba(200,50,50,.08);color:#8B1A1A;border:1px solid rgba(200,50,50,.2);margin-bottom:12px">
+            <i class="ti ti-alert-triangle" style="margin-right:6px"></i>
+            <strong>Dikkat:</strong> Yükleme mevcut verilerin üzerine yazar. Önce yedek alın!
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="file" id="restore-file" accept=".json"
+              style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--bg)">
+            <button class="btn btn-danger" onclick="runRestore()" style="background:#8B1A1A;color:#fff;border:none;flex-shrink:0">
+              <i class="ti ti-upload"></i> Yükle
+            </button>
+          </div>
+          <div id="restore-log" style="font-family:monospace;font-size:12px;color:var(--text-muted);min-height:40px;line-height:1.8;margin-top:10px"></div>
+        </div>
+      </div>
+
       <div class="card">
         <div class="card-header"><h3>Yedeklenecek Tablolar</h3></div>
         <div class="card-body" style="padding:0">
@@ -464,6 +485,7 @@ select.form-control{cursor:pointer}
           </table>
         </div>
       </div>
+
       <div class="card">
         <div class="card-header">
           <h3>İşlem Günlüğü</h3>
@@ -1836,6 +1858,105 @@ window.runBackup = async function() {
     hasError ? 'err' : 'ok'
   );
   loadBackupStats();
+};
+
+// Yedek yükleme sırası — bağımlılık sırasına göre
+const RESTORE_ORDER = [
+  'sections',
+  'content_blocks',
+  'audio_files',
+  'links',
+  'gallery',
+  'comments',
+  'site_settings',
+];
+
+function restoreLog(msg, type = 'info') {
+  const log   = document.getElementById('restore-log');
+  const color = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--danger)' : 'var(--text-muted)';
+  const icon  = type === 'ok' ? '✓' : type === 'err' ? '✗' : '›';
+  log.innerHTML += `<div style="color:${color}">${icon} ${new Date().toLocaleTimeString('tr-TR')} — ${msg}</div>`;
+  log.scrollTop  = log.scrollHeight;
+}
+
+window.runRestore = async function() {
+  const fileInput = document.getElementById('restore-file');
+  const file      = fileInput.files[0];
+  if (!file) { alert('Lütfen bir JSON yedek dosyası seçin.'); return; }
+
+  if (!confirm('Bu işlem mevcut verilerin üzerine yazacak. Devam etmek istiyor musunuz?')) return;
+
+  document.getElementById('restore-log').innerHTML = '';
+  restoreLog('Dosya okunuyor...');
+
+  let backup;
+  try {
+    const text = await file.text();
+    backup = JSON.parse(text);
+  } catch(e) {
+    restoreLog('Dosya okunamadı: ' + e.message, 'err');
+    return;
+  }
+
+  // Tek tablo yedeği mi, tam yedek mi?
+  const tables = backup.tables || (backup.table ? { [backup.table]: backup.data } : null);
+  if (!tables) { restoreLog('Geçersiz yedek formatı.', 'err'); return; }
+
+  restoreLog(`Yedek tarihi: ${backup.exported_at || 'Bilinmiyor'}`);
+
+  let totalInserted = 0;
+  let hasError      = false;
+
+  for (const key of RESTORE_ORDER) {
+    const rows = tables[key];
+    if (!rows || !rows.length) continue;
+
+    const t = BACKUP_TABLES.find(t => t.key === key);
+    restoreLog(`${t?.label || key} yükleniyor (${rows.length} kayıt)...`);
+
+    // Önce mevcut verileri temizle
+    const { error: delErr } = await supabase.from(key).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (delErr) {
+      // site_settings için id kolonu yok, key ile sil
+      if (key === 'site_settings') {
+        await supabase.from(key).delete().neq('key', '____never____');
+      } else {
+        restoreLog(`${t?.label || key} temizlenemedi: ${delErr.message}`, 'err');
+        hasError = true;
+        continue;
+      }
+    }
+
+    // Toplu insert (50'şer)
+    const chunkSize = 50;
+    let inserted    = 0;
+    for (let i = 0; i < rows.length; i += chunkSize) {
+      const chunk = rows.slice(i, i + chunkSize);
+      const { error: insErr } = await supabase.from(key).insert(chunk);
+      if (insErr) {
+        restoreLog(`${t?.label || key} yükleme hatası: ${insErr.message}`, 'err');
+        hasError = true;
+        break;
+      }
+      inserted += chunk.length;
+    }
+
+    if (!hasError || inserted > 0) {
+      totalInserted += inserted;
+      restoreLog(`${t?.label || key}: ${inserted} kayıt yüklendi ✓`, 'ok');
+    }
+  }
+
+  restoreLog('─'.repeat(40));
+  restoreLog(
+    hasError
+      ? `Yükleme tamamlandı (bazı hatalar). Toplam: ${totalInserted} kayıt yüklendi.`
+      : `Yükleme başarıyla tamamlandı! Toplam: ${totalInserted} kayıt yüklendi.`,
+    hasError ? 'err' : 'ok'
+  );
+
+  loadBackupStats();
+  fileInput.value = '';
 };
 </script>
 </body>
