@@ -996,9 +996,10 @@ function populateCommentSelects(comments) {
   const sections = cache.sections || [];
   if (!sections.length) return;
 
-  const sectionOpts = sections.map(s =>
-    `<option value="${s.id}">${s.title}</option>`
-  ).join('');
+  const sectionOpts = sections
+    .filter(s => s.comments_enabled !== false)
+    .map(s => `<option value="${s.id}">${s.title}</option>`)
+    .join('');
 
   // Yorum formu dropdown
   const cSection = document.getElementById('c-section');
