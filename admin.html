@@ -200,6 +200,7 @@ select.form-control{cursor:pointer}
     </nav>
       <div class="nav-group-title">Sistem</div>
       <button class="nav-link" onclick="showPanel('settings',this)"><i class="ti ti-settings"></i>Site Ayarları</button>
+      <button class="nav-link" onclick="showPanel('backup',this)"><i class="ti ti-database-export"></i>Yedek Al</button>
     <div class="sidebar-footer">
       <button class="nav-link" onclick="doLogout()" style="padding:8px 0;color:rgba(255,255,255,.7)"><i class="ti ti-logout"></i>Çıkış</button>
       <a href="index.html" target="_blank" class="nav-link" style="padding:8px 0;color:rgba(255,255,255,.7);text-decoration:none"><i class="ti ti-external-link"></i>Siteyi Gör</a>
@@ -429,6 +430,50 @@ select.form-control{cursor:pointer}
                 <div class="lbl">Onaylı Yorum</div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- YEDEK PANELİ -->
+    <div id="panel-backup" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Yedek Al</div>
+          <div class="panel-subtitle">Tüm içeriği JSON formatında indirin</div>
+        </div>
+        <button class="btn btn-primary" onclick="runBackup()">
+          <i class="ti ti-database-export"></i> Şimdi Yedekle
+        </button>
+      </div>
+      <div class="alert" style="background:rgba(41,128,185,.08);color:#1A5276;border:1px solid rgba(41,128,185,.2);margin-bottom:16px">
+        <i class="ti ti-info-circle" style="margin-right:6px"></i>
+        Yedek; bölümler, içerik blokları, yorumlar, ses dosyaları, galeri ve linkleri kapsar.
+        Dosyalar (görseller, sesler) Supabase Storage'da kalır — bu yedek yalnızca <strong>veritabanı kayıtlarını</strong> içerir.
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Yedeklenecek Tablolar</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="data-table">
+            <thead>
+              <tr><th>Tablo</th><th>Kayıt Sayısı</th><th>Durum</th><th style="width:140px">İndir</th></tr>
+            </thead>
+            <tbody id="backup-tbody">
+              <tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h3>İşlem Günlüğü</h3>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('backup-log').innerHTML=''">
+            <i class="ti ti-trash"></i> Temizle
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="backup-log" style="font-family:monospace;font-size:12px;color:var(--text-muted);min-height:60px;line-height:1.8">
+            Yedek almak için "Şimdi Yedekle" butonuna tıklayın.
           </div>
         </div>
       </div>
@@ -907,6 +952,7 @@ window.showPanel = function(id, btn) {
   if (id === 'sections') loadSections();
   if (id === 'comments') loadComments('all');
   if (id === 'settings') loadSettings();
+  if (id === 'backup')   loadBackupStats();
 };
 
 // ── DASHBOARD ─────────────────────────────────────────────────
@@ -1699,6 +1745,98 @@ window.closeModal = id => {
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
 });
+
+// ── YEDEKLEME ────────────────────────────────────────────────
+
+const BACKUP_TABLES = [
+  { key: 'sections',       label: 'Bölümler',        query: () => supabase.from('sections').select('*').order('sort_order') },
+  { key: 'content_blocks', label: 'İçerik Blokları', query: () => supabase.from('content_blocks').select('*').order('sort_order') },
+  { key: 'comments',       label: 'Yorumlar',         query: () => supabase.from('comments').select('*').order('created_at') },
+  { key: 'audio_files',    label: 'Ses Dosyaları',    query: () => supabase.from('audio_files').select('*').order('sort_order') },
+  { key: 'gallery',        label: 'Galeri',           query: () => supabase.from('gallery').select('*').order('sort_order') },
+  { key: 'links',          label: 'Linkler',          query: () => supabase.from('links').select('*').order('sort_order') },
+  { key: 'site_settings',  label: 'Site Ayarları',    query: () => supabase.from('site_settings').select('*') },
+];
+
+async function loadBackupStats() {
+  const tbody = document.getElementById('backup-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
+  const rows = await Promise.all(
+    BACKUP_TABLES.map(async t => {
+      const { count, error } = await supabase.from(t.key).select('*', { count: 'exact', head: true });
+      return { ...t, count: error ? '⚠️' : (count ?? 0), error };
+    })
+  );
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td style="font-weight:600">${r.label}</td>
+      <td>${r.error ? '<span style="color:var(--danger)">Erişim hatası</span>' : r.count + ' kayıt'}</td>
+      <td>${r.error ? '<span class="badge badge-red">Hata</span>' : '<span class="badge badge-green">Hazır</span>'}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="backupSingleTable('${r.key}','${r.label}')">
+          <i class="ti ti-download"></i> İndir
+        </button>
+      </td>
+    </tr>`).join('');
+}
+
+function backupLog(msg, type = 'info') {
+  const log   = document.getElementById('backup-log');
+  const color = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--danger)' : 'var(--text-muted)';
+  const icon  = type === 'ok' ? '✓' : type === 'err' ? '✗' : '›';
+  log.innerHTML += `<div style="color:${color}">${icon} ${new Date().toLocaleTimeString('tr-TR')} — ${msg}</div>`;
+  log.scrollTop  = log.scrollHeight;
+}
+
+function downloadJSON(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.backupSingleTable = async function(tableKey, label) {
+  backupLog(`${label} indiriliyor...`);
+  const t = BACKUP_TABLES.find(t => t.key === tableKey);
+  const { data, error } = await t.query();
+  if (error) { backupLog(`${label} hatası: ${error.message}`, 'err'); return; }
+  const date = new Date().toISOString().slice(0, 10);
+  downloadJSON({ table: tableKey, exported_at: new Date().toISOString(), count: data.length, data },
+    `nikfer-${tableKey}-${date}.json`);
+  backupLog(`${label}: ${data.length} kayıt indirildi.`, 'ok');
+};
+
+window.runBackup = async function() {
+  document.getElementById('backup-log').innerHTML = '';
+  backupLog('Tam yedekleme başlatılıyor...');
+  const backup = { exported_at: new Date().toISOString(), version: '1.0', tables: {} };
+  let totalRecords = 0;
+  let hasError     = false;
+
+  for (const t of BACKUP_TABLES) {
+    backupLog(`${t.label} çekiliyor...`);
+    const { data, error } = await t.query();
+    if (error) { backupLog(`${t.label} hatası: ${error.message}`, 'err'); hasError = true; continue; }
+    backup.tables[t.key] = data;
+    totalRecords += data.length;
+    backupLog(`${t.label}: ${data.length} kayıt ✓`, 'ok');
+  }
+
+  const date     = new Date().toISOString().slice(0, 10);
+  const filename = `nikfer-tam-yedek-${date}.json`;
+  downloadJSON(backup, filename);
+  backupLog('─'.repeat(40));
+  backupLog(
+    hasError
+      ? `Yedek tamamlandı (bazı hata). Toplam: ${totalRecords} kayıt → ${filename}`
+      : `Yedek başarıyla tamamlandı! Toplam: ${totalRecords} kayıt → ${filename}`,
+    hasError ? 'err' : 'ok'
+  );
+  loadBackupStats();
+};
 </script>
 </body>
 </html>
