@@ -746,8 +746,8 @@ function renderSection(data) {
   if (gallery.length) {
     html += `<div class="blk-heading"><i class="ti ti-photo" style="margin-right:6px;font-size:14px"></i>Fotoğraflar <span style="font-size:11px;font-weight:400;opacity:.7">(${gallery.length} fotoğraf)</span></div>`;
     html += `<div class="gallery-grid">`;
-    // Maksimum 8 thumbnail göster, fazlası "+N daha" olarak
-    const MAX_THUMB = 8;
+    // Maksimum 12 thumbnail göster, fazlası "+N daha" olarak
+    const MAX_THUMB = 12;
     gallery.slice(0, MAX_THUMB).forEach((g, idx) => {
       const isLast  = idx === MAX_THUMB - 1 && gallery.length > MAX_THUMB;
       const remaining = gallery.length - MAX_THUMB;
