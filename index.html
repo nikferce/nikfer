@@ -1232,17 +1232,6 @@ document.addEventListener('keydown', e => {
   });
 })();
 
-// Tüm fotoğrafları aç (thumbnail grid'den)
-window.openAllGallery = function(btn) {
-  const thumbs = [...document.querySelectorAll('.gallery-thumb[data-url]')];
-  if (!thumbs.length) return;
-  _lbImages = thumbs.map(t => ({ url: t.dataset.url, caption: t.dataset.caption || '' }));
-  _lbIndex  = 0;
-  lbShow(0);
-  document.getElementById('lightbox').classList.add('open');
-  document.body.style.overflow = 'hidden';
-};
-
 // ── SHARE ─────────────────────────────────────────────────
 window.shareApp = function() {
   const data = { title: 'Nikfer Belleği', text: 'Nikfer kasabasının dijital bellek arşivi', url: window.location.href };
