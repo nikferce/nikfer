@@ -744,12 +744,14 @@ function renderSection(data) {
 
   // Gallery
   if (gallery.length) {
+    // Tüm galeriyi global değişkende sakla — lightbox için
+    window._currentGallery = gallery.map(g => ({ url: g.file_url, caption: g.caption || '' }));
+
     html += `<div class="blk-heading"><i class="ti ti-photo" style="margin-right:6px;font-size:14px"></i>Fotoğraflar <span style="font-size:11px;font-weight:400;opacity:.7">(${gallery.length} fotoğraf)</span></div>`;
     html += `<div class="gallery-grid">`;
-    // Maksimum 12 thumbnail göster, fazlası "+N daha" olarak
-    const MAX_THUMB = 12;
+    const MAX_THUMB = 8;
     gallery.slice(0, MAX_THUMB).forEach((g, idx) => {
-      const isLast  = idx === MAX_THUMB - 1 && gallery.length > MAX_THUMB;
+      const isLast    = idx === MAX_THUMB - 1 && gallery.length > MAX_THUMB;
       const remaining = gallery.length - MAX_THUMB;
       html += `<div style="text-align:center">
         <div class="gallery-thumb" data-url="${g.file_url}" data-caption="${(g.caption||'').replace(/"/g,'&quot;')}"
@@ -761,9 +763,8 @@ function renderSection(data) {
       </div>`;
     });
     html += `</div>`;
-    // Tümünü gör butonu (8'den fazla fotoğraf varsa)
     if (gallery.length > MAX_THUMB) {
-      html += `<button onclick="openAllGallery(this)" data-section-id="${section.id}"
+      html += `<button onclick="openAllGallery()"
         style="background:none;border:1px solid var(--border);color:var(--primary);border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer;margin-top:4px;width:100%">
         <i class="ti ti-photo" style="margin-right:4px"></i>Tümünü Gör (${gallery.length} fotoğraf)
       </button>`;
@@ -1134,14 +1135,12 @@ function handleDeepLink() {
 let _lbImages  = [];   // {url, caption} dizisi
 let _lbIndex   = 0;    // aktif fotoğraf indexi
 
-// Tek fotoğraf aç (eski çağrılar için)
+// Tek fotoğraf aç — tüm galeriyi yükler, seçilen fotoğraftan başlar
 window.openLightbox = function(src, caption) {
-  // Sayfadaki tüm thumb'ları topla
-  const thumbs = [...document.querySelectorAll('.gallery-thumb[data-url]')];
-  if (thumbs.length) {
-    _lbImages = thumbs.map(t => ({ url: t.dataset.url, caption: t.dataset.caption || '' }));
-    const idx  = _lbImages.findIndex(i => i.url === src);
-    _lbIndex   = idx >= 0 ? idx : 0;
+  if (window._currentGallery && window._currentGallery.length) {
+    _lbImages = window._currentGallery;
+    const idx = _lbImages.findIndex(i => i.url === src);
+    _lbIndex  = idx >= 0 ? idx : 0;
   } else {
     _lbImages = [{ url: src, caption: caption || '' }];
     _lbIndex  = 0;
@@ -1157,13 +1156,22 @@ window.closeLightbox = function() {
   document.body.style.overflow = '';
 };
 
+// Tümünü gör butonu — ilk fotoğraftan başlar
+window.openAllGallery = function() {
+  if (!window._currentGallery || !window._currentGallery.length) return;
+  _lbImages = window._currentGallery;
+  _lbIndex  = 0;
+  lbShow(0);
+  document.getElementById('lightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+
 // İleri / geri
 window.lbNav = function(dir) {
   const next = _lbIndex + dir;
   if (next < 0 || next >= _lbImages.length) return;
   lbShow(next);
 };
-
 function lbShow(idx) {
   _lbIndex = idx;
   const img  = document.getElementById('lightbox-img');
