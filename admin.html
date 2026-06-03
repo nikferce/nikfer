@@ -773,7 +773,7 @@ import {
   getSections, getAllSections, createSection, updateSection, deleteSection,
   getContentBlocks, getAllContentBlocks, createBlock, updateBlock, deleteBlock,
   getAudioFiles, uploadAudio, updateAudio, deleteAudio,
-  uploadImage, updateImage, deleteImage, getGallery,
+  uploadImage, updateImage, deleteImage, getGallery, getAllGallery,
   getLinks, createLink, updateLink, deleteLink,
   getAllComments, approveComment, pinComment, deleteComment,
   getSiteSettings, updateSiteSetting, getStatCounts
@@ -1473,16 +1473,25 @@ window.loadGallery = async function(sectionId) {
   if (!sectionId) return;
   const grid = document.getElementById('gallery-grid-admin');
   grid.innerHTML = '<div class="loading-row"><span class="spinner"></span></div>';
-  const items = await getGallery(sectionId);
+  const items = await getAllGallery(sectionId);
   if (!items.length) { grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Fotoğraf yok.</p>'; return; }
   _currentGallery = items;
-  grid.innerHTML = items.map(g => `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden">
-      <img src="${g.file_url}" style="width:100%;aspect-ratio:4/3;object-fit:cover" loading="lazy">
+  grid.innerHTML = items.map(g => {
+    const isVisible = g.is_visible !== false;
+    return `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;${isVisible ? '' : 'opacity:.45'}">
+      <div style="position:relative">
+        <img src="${g.file_url}" style="width:100%;aspect-ratio:4/3;object-fit:cover" loading="lazy">
+        ${!isVisible ? '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px">gizli</div>' : ''}
+      </div>
       <div style="padding:8px">
         <div style="font-size:12px;font-weight:600">${g.title||'—'}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${g.caption||''}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn btn-ghost btn-sm btn-icon" title="${isVisible ? 'Gizle' : 'Göster'}"
+            onclick="toggleGalleryVisibility('${g.id}',${isVisible},'${sectionId}')">
+            <i class="ti ti-${isVisible ? 'eye' : 'eye-off'}"></i>
+          </button>
           <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" title="Düzenle"
             onclick="openImageEditModal('${g.id}')">
             <i class="ti ti-pencil"></i> Düzenle
@@ -1493,7 +1502,17 @@ window.loadGallery = async function(sectionId) {
           </button>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+};
+
+window.toggleGalleryVisibility = async function(id, currentlyVisible, sectionId) {
+  try {
+    await updateImage(id, { is_visible: !currentlyVisible });
+    loadGallery(sectionId);
+  } catch(e) {
+    alert('Hata: ' + e.message);
+  }
 };
 
 window.uploadImageUI = async function() {
