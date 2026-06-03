@@ -771,7 +771,7 @@ import {
   supabase,
   signIn, signOut, getSession, onAuthChange,
   getSections, getAllSections, createSection, updateSection, deleteSection,
-  getContentBlocks, createBlock, updateBlock, deleteBlock,
+  getContentBlocks, getAllContentBlocks, createBlock, updateBlock, deleteBlock,
   getAudioFiles, uploadAudio, updateAudio, deleteAudio,
   uploadImage, updateImage, deleteImage, getGallery,
   getLinks, createLink, updateLink, deleteLink,
@@ -1225,7 +1225,7 @@ window.loadBlocks = async function(sectionId) {
   _currentSectionId = sectionId;
   const tbody = document.getElementById('blocks-tbody');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
-  const blocks = await getContentBlocks(sectionId);
+  const blocks = await getAllContentBlocks(sectionId);
   _currentBlocks = blocks;
   renderBlocksTable(blocks, sectionId);
 };
@@ -1242,20 +1242,26 @@ function renderBlocksTable(blocks, sectionId) {
   const typeColors = {paragraph:'blue',heading:'purple',quote:'yellow',poem:'green',list_item:'blue',info_row:'yellow',table_row:'blue',note:'red',divider:'blue'};
   let rows = '';
   blocks.forEach((b, idx) => {
-    const isFirst = idx === 0;
-    const isLast  = idx === blocks.length - 1;
-    const preview = (b.content || '—').replace(/</g,'&lt;').replace(/"/g,'&quot;').slice(0,65) + ((b.content||'').length > 65 ? '…' : '');
-    const color   = typeColors[b.type] || 'blue';
-    // Güvenli yol: onclick içine VERİ koymuyoruz, sadece ID ile cache'den çekiyoruz
-    rows += `<tr>
+    const isFirst   = idx === 0;
+    const isLast    = idx === blocks.length - 1;
+    const isVisible = b.is_visible !== false;
+    const preview   = (b.content || '—').replace(/</g,'&lt;').replace(/"/g,'&quot;').slice(0,65) + ((b.content||'').length > 65 ? '…' : '');
+    const color     = typeColors[b.type] || 'blue';
+    rows += `<tr style="${isVisible ? '' : 'opacity:.45;background:rgba(0,0,0,.02)'}">
       <td style="font-weight:700;color:var(--primary);text-align:center;width:36px">${idx + 1}</td>
-      <td style="width:90px"><span class="badge badge-${color}" style="white-space:nowrap;font-size:9px">${b.type}</span></td>
+      <td style="width:90px">
+        <span class="badge badge-${color}" style="white-space:nowrap;font-size:9px">${b.type}</span>
+        ${!isVisible ? '<span style="font-size:9px;color:var(--danger);display:block;margin-top:2px">gizli</span>' : ''}
+      </td>
       <td style="font-size:11px;color:var(--text-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</td>
-      <td style="width:190px">
+      <td style="width:210px">
         <div style="display:flex;gap:3px;align-items:center">
           <button class="btn btn-ghost btn-sm btn-icon" title="Yukarı" ${isFirst?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',-1)"><i class="ti ti-arrow-up"></i></button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Aşağı" ${isLast?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',1)"><i class="ti ti-arrow-down"></i></button>
           <button class="btn btn-sm btn-icon" title="Altına ekle" style="background:rgba(39,174,96,.1);color:#1E8449;border:1px solid rgba(39,174,96,.3)" onclick="openBlockModalAfter(${idx+1})"><i class="ti ti-plus"></i></button>
+          <button class="btn btn-ghost btn-sm btn-icon" title="${isVisible ? 'Gizle' : 'Göster'}" onclick="toggleBlockVisibility('${b.id}',${isVisible})">
+            <i class="ti ti-${isVisible ? 'eye' : 'eye-off'}"></i>
+          </button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle" data-block-id="${b.id}" onclick="editBlockById(this.dataset.blockId)"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-danger btn-sm btn-icon" title="Sil" onclick="deleteBlockUI('${b.id}','${sectionId}')"><i class="ti ti-trash"></i></button>
         </div>
@@ -1270,6 +1276,15 @@ window.editBlockById = function(blockId) {
   const b = _currentBlocks.find(x => x.id === blockId);
   if (!b) { alert('Blok bulunamadı, sayfayı yenileyin.'); return; }
   editBlock(b);
+};
+
+window.toggleBlockVisibility = async function(blockId, currentlyVisible) {
+  try {
+    await updateBlock(blockId, { is_visible: !currentlyVisible });
+    await loadBlocks(_currentSectionId);
+  } catch(e) {
+    alert('Hata: ' + e.message);
+  }
 };
 
 window.moveBlock = async function(blockId, direction) {
@@ -1291,7 +1306,7 @@ window.moveBlock = async function(blockId, direction) {
 };
 
 async function normalizeBlockOrders(sectionId) {
-  const blocks = await getContentBlocks(sectionId);
+  const blocks = await getAllContentBlocks(sectionId);
   await Promise.all(blocks.map((b,i) => updateBlock(b.id, {sort_order:(i+1)*10})));
 }
 
