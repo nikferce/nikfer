@@ -835,15 +835,13 @@ function renderBlock(b) {
     }
     case 'heading':
       return `<div class="blk-heading">${b.content}</div>`;
-    case 'quote':
-      return `<div class="blk-quote">${b.content}${m.author ? `<div class="blk-quote-author">— ${m.author}</div>` : ''}</div>`;
+        case 'quote':
+      return `<div class="blk-quote">${b.content}${m.author ? `<div class="blk-quote-author">— ${m.author}${m.year ? `, ${m.year}` : ''}</div>` : ''}</div>`;
     case 'poem':
-      return `<div class="blk-poem">${b.content}${m.author ? `<div class="blk-poem-author">— ${m.author}</div>` : ''}</div>`;
+      return `<div class="blk-poem">${b.content}${m.author ? `<div class="blk-poem-author">— ${m.author}${m.year ? `, ${m.year}` : ''}</div>` : ''}</div>`;
     case 'note':
-      return `<div class="blk-note">
-        <i class="ti ti-info-circle" style="margin-right:4px"></i>${b.content}
-        ${m.author ? `<span style="display:block;margin-top:4px;font-style:italic;opacity:.8">— ${m.author}</span>` : ''}
-      </div>`;
+      return `<div class="blk-note">${b.content}${m.author ? `<div class="blk-note-author">— ${m.author}</div>` : ''}
+	  </div>`;
     case 'list_item':
       if (m.answer !== undefined) {
         // Bilmece — bullet + column layout
