@@ -206,7 +206,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tc-tl-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
 .tc-tl-item:last-child{border-bottom:none}
 .tc-tl-year{color:var(--primary);font-weight:700;flex-shrink:0;min-width:54px}
-.tc-tl-text{color:var(--text);line-height:1.4}
+.tc-tl-text{color:var(--text);line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Şehit satırı */
 .tc-sehit-item{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
 .tc-sehit-item:last-child{border-bottom:none}
@@ -981,7 +981,7 @@ async function loadTarihPreviewCards() {
     // Kronoloji — ilk 6 list_item
     const kronoHTML = kronoloji.blocks
       .filter(b => b.type === 'list_item')
-      .slice(0, 9)
+      .slice(0, 6)
       .map(b => {
         // Önce meta.year'a bak, yoksa içerikten parse et
         let year = b.meta?.year || '';
@@ -1004,7 +1004,7 @@ async function loadTarihPreviewCards() {
     // Çanakkale — ilk 6 table_row
     const sehitHTML = canakkale.blocks
       .filter(b => b.type === 'table_row')
-      .slice(0, 9)
+      .slice(0, 6)
       .map(b => {
         const cols = b.meta?.cols || [];
         return `<div class="tc-sehit-item">
@@ -1016,7 +1016,7 @@ async function loadTarihPreviewCards() {
     // Muhtarlar — ilk 6 table_row
     const muhtarHTML = muhtarlar.blocks
       .filter(b => b.type === 'table_row')
-      .slice(0, 9)
+      .slice(0, 6)
       .map(b => {
         const cols = b.meta?.cols || [];
         return `<div class="tc-muhtar-item">
@@ -1028,7 +1028,7 @@ async function loadTarihPreviewCards() {
     // Köklerimiz — ilk 6 list_item
     const koklereHTML = koklere.blocks
       .filter(b => b.type === 'list_item')
-      .slice(0, 9)
+      .slice(0, 6)
       .map(b => {
         let year = b.meta?.year || '';
         let text = b.content;
