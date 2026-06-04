@@ -1039,7 +1039,7 @@ async function loadTarihPreviewCards() {
           text = text.replace(/^\d[\d\s\.–—-]*—?\s*/, '').trim();
         }
         return `<div class="tc-tl-item">
-              <!-- <span class="tc-tl-year">${year}</span> -->
+          <span class="tc-tl-year">${year}</span>
           <span class="tc-tl-text">${text}</span>
         </div>`;
       }).join('');
