@@ -567,6 +567,17 @@ select.form-control{cursor:pointer}
           </span>
         </label>
       </div>
+      <div class="form-group">
+        <label class="form-label">
+          📂 Sayfa
+          <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px">Alt menüde nerede görünsün?</span>
+        </label>
+        <select class="form-control" id="section-page">
+          <option value="">— Sadece Ana Sayfa —</option>
+          <option value="kultur">Kültür</option>
+          <option value="tarih">Tarih</option>
+        </select>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('section-modal')">İptal</button>
@@ -771,9 +782,9 @@ import {
   supabase,
   signIn, signOut, getSession, onAuthChange,
   getSections, getAllSections, createSection, updateSection, deleteSection,
-  getContentBlocks, getAllContentBlocks, createBlock, updateBlock, deleteBlock,
+  getContentBlocks, createBlock, updateBlock, deleteBlock,
   getAudioFiles, uploadAudio, updateAudio, deleteAudio,
-  uploadImage, updateImage, deleteImage, getGallery, getAllGallery,
+  uploadImage, updateImage, deleteImage, getGallery,
   getLinks, createLink, updateLink, deleteLink,
   getAllComments, approveComment, pinComment, deleteComment,
   getSiteSettings, updateSiteSetting, getStatCounts
@@ -1137,6 +1148,7 @@ window.openSectionModal = function() {
   document.getElementById('section-id').value = '';
   ['section-title','section-subtitle','section-slug','section-icon','section-sort'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('section-visible').checked = true;
+  document.getElementById('section-page').value = '';
   openModal('section-modal');
 };
 
@@ -1155,10 +1167,9 @@ window.editSection = function(s) {
   document.getElementById('section-icon').value            = s.icon || '';
   document.getElementById('section-sort').value            = s.sort_order;
   document.getElementById('section-visible').checked       = s.is_visible;
-  document.getElementById('section-comments').checked      =
-    s.comments_enabled !== false;
-  document.getElementById('section-featured').checked      =
-    s.is_featured === true;
+  document.getElementById('section-comments').checked      = s.comments_enabled !== false;
+  document.getElementById('section-featured').checked      = s.is_featured === true;
+  document.getElementById('section-page').value            = s.page || '';
   openModal('section-modal');
 };
 
@@ -1174,6 +1185,7 @@ window.saveSectionUI = async function() {
     is_visible:       document.getElementById('section-visible').checked,
     comments_enabled: document.getElementById('section-comments').checked,
     is_featured:      document.getElementById('section-featured').checked,
+    page:             document.getElementById('section-page').value || null,
   };
   if (!payload.title || !payload.slug) {
     alert.innerHTML = '<div class="alert alert-danger">Başlık ve slug zorunludur.</div>'; return;
@@ -1225,7 +1237,7 @@ window.loadBlocks = async function(sectionId) {
   _currentSectionId = sectionId;
   const tbody = document.getElementById('blocks-tbody');
   tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
-  const blocks = await getAllContentBlocks(sectionId);
+  const blocks = await getContentBlocks(sectionId);
   _currentBlocks = blocks;
   renderBlocksTable(blocks, sectionId);
 };
@@ -1242,26 +1254,20 @@ function renderBlocksTable(blocks, sectionId) {
   const typeColors = {paragraph:'blue',heading:'purple',quote:'yellow',poem:'green',list_item:'blue',info_row:'yellow',table_row:'blue',note:'red',divider:'blue'};
   let rows = '';
   blocks.forEach((b, idx) => {
-    const isFirst   = idx === 0;
-    const isLast    = idx === blocks.length - 1;
-    const isVisible = b.is_visible !== false;
-    const preview   = (b.content || '—').replace(/</g,'&lt;').replace(/"/g,'&quot;').slice(0,65) + ((b.content||'').length > 65 ? '…' : '');
-    const color     = typeColors[b.type] || 'blue';
-    rows += `<tr style="${isVisible ? '' : 'opacity:.45;background:rgba(0,0,0,.02)'}">
+    const isFirst = idx === 0;
+    const isLast  = idx === blocks.length - 1;
+    const preview = (b.content || '—').replace(/</g,'&lt;').replace(/"/g,'&quot;').slice(0,65) + ((b.content||'').length > 65 ? '…' : '');
+    const color   = typeColors[b.type] || 'blue';
+    // Güvenli yol: onclick içine VERİ koymuyoruz, sadece ID ile cache'den çekiyoruz
+    rows += `<tr>
       <td style="font-weight:700;color:var(--primary);text-align:center;width:36px">${idx + 1}</td>
-      <td style="width:90px">
-        <span class="badge badge-${color}" style="white-space:nowrap;font-size:9px">${b.type}</span>
-        ${!isVisible ? '<span style="font-size:9px;color:var(--danger);display:block;margin-top:2px">gizli</span>' : ''}
-      </td>
+      <td style="width:90px"><span class="badge badge-${color}" style="white-space:nowrap;font-size:9px">${b.type}</span></td>
       <td style="font-size:11px;color:var(--text-muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${preview}</td>
-      <td style="width:210px">
+      <td style="width:190px">
         <div style="display:flex;gap:3px;align-items:center">
           <button class="btn btn-ghost btn-sm btn-icon" title="Yukarı" ${isFirst?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',-1)"><i class="ti ti-arrow-up"></i></button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Aşağı" ${isLast?'disabled style="opacity:.3"':''} onclick="moveBlock('${b.id}',1)"><i class="ti ti-arrow-down"></i></button>
           <button class="btn btn-sm btn-icon" title="Altına ekle" style="background:rgba(39,174,96,.1);color:#1E8449;border:1px solid rgba(39,174,96,.3)" onclick="openBlockModalAfter(${idx+1})"><i class="ti ti-plus"></i></button>
-          <button class="btn btn-ghost btn-sm btn-icon" title="${isVisible ? 'Gizle' : 'Göster'}" onclick="toggleBlockVisibility('${b.id}',${isVisible})">
-            <i class="ti ti-${isVisible ? 'eye' : 'eye-off'}"></i>
-          </button>
           <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle" data-block-id="${b.id}" onclick="editBlockById(this.dataset.blockId)"><i class="ti ti-pencil"></i></button>
           <button class="btn btn-danger btn-sm btn-icon" title="Sil" onclick="deleteBlockUI('${b.id}','${sectionId}')"><i class="ti ti-trash"></i></button>
         </div>
@@ -1276,15 +1282,6 @@ window.editBlockById = function(blockId) {
   const b = _currentBlocks.find(x => x.id === blockId);
   if (!b) { alert('Blok bulunamadı, sayfayı yenileyin.'); return; }
   editBlock(b);
-};
-
-window.toggleBlockVisibility = async function(blockId, currentlyVisible) {
-  try {
-    await updateBlock(blockId, { is_visible: !currentlyVisible });
-    await loadBlocks(_currentSectionId);
-  } catch(e) {
-    alert('Hata: ' + e.message);
-  }
 };
 
 window.moveBlock = async function(blockId, direction) {
@@ -1306,7 +1303,7 @@ window.moveBlock = async function(blockId, direction) {
 };
 
 async function normalizeBlockOrders(sectionId) {
-  const blocks = await getAllContentBlocks(sectionId);
+  const blocks = await getContentBlocks(sectionId);
   await Promise.all(blocks.map((b,i) => updateBlock(b.id, {sort_order:(i+1)*10})));
 }
 
@@ -1473,25 +1470,16 @@ window.loadGallery = async function(sectionId) {
   if (!sectionId) return;
   const grid = document.getElementById('gallery-grid-admin');
   grid.innerHTML = '<div class="loading-row"><span class="spinner"></span></div>';
-  const items = await getAllGallery(sectionId);
+  const items = await getGallery(sectionId);
   if (!items.length) { grid.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Fotoğraf yok.</p>'; return; }
   _currentGallery = items;
-  grid.innerHTML = items.map(g => {
-    const isVisible = g.is_visible !== false;
-    return `
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden;${isVisible ? '' : 'opacity:.45'}">
-      <div style="position:relative">
-        <img src="${g.file_url}" style="width:100%;aspect-ratio:4/3;object-fit:cover" loading="lazy">
-        ${!isVisible ? '<div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:2px 8px;border-radius:10px">gizli</div>' : ''}
-      </div>
+  grid.innerHTML = items.map(g => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <img src="${g.file_url}" style="width:100%;aspect-ratio:4/3;object-fit:cover" loading="lazy">
       <div style="padding:8px">
         <div style="font-size:12px;font-weight:600">${g.title||'—'}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${g.caption||''}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
-          <button class="btn btn-ghost btn-sm btn-icon" title="${isVisible ? 'Gizle' : 'Göster'}"
-            onclick="toggleGalleryVisibility('${g.id}',${isVisible},'${sectionId}')">
-            <i class="ti ti-${isVisible ? 'eye' : 'eye-off'}"></i>
-          </button>
           <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center" title="Düzenle"
             onclick="openImageEditModal('${g.id}')">
             <i class="ti ti-pencil"></i> Düzenle
@@ -1502,17 +1490,7 @@ window.loadGallery = async function(sectionId) {
           </button>
         </div>
       </div>
-    </div>`;
-  }).join('');
-};
-
-window.toggleGalleryVisibility = async function(id, currentlyVisible, sectionId) {
-  try {
-    await updateImage(id, { is_visible: !currentlyVisible });
-    loadGallery(sectionId);
-  } catch(e) {
-    alert('Hata: ' + e.message);
-  }
+    </div>`).join('');
 };
 
 window.uploadImageUI = async function() {
