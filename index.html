@@ -190,6 +190,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tl-year{font-size:11px;font-weight:700;color:var(--primary);margin-bottom:3px}
 .tl-text{font-size:12px;color:var(--text);line-height:1.5}
 
+/* TARİH ÖNIZLEME KARTLARI */
+.tarih-cards{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:14px}
+@media(min-width:600px){.tarih-cards{grid-template-columns:1fr 1fr}}
+@media(min-width:900px){.tarih-cards{grid-template-columns:1fr 1fr 1fr}}
+.tarih-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column}
+.tarih-card-header{background:var(--primary);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.tarih-card-header i{color:var(--accent-light);font-size:18px}
+.tarih-card-header h3{color:#fff;font-size:13px;font-weight:600;flex:1}
+.tarih-card-body{padding:10px 14px;flex:1}
+.tarih-card-footer{padding:8px 14px;border-top:1px solid var(--border)}
+.tarih-card-footer button{background:none;border:none;color:var(--primary);font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:left;padding:2px 0}
+.tarih-card-footer button:hover{text-decoration:underline}
+/* Kronoloji satırı */
+.tc-tl-item{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.tc-tl-item:last-child{border-bottom:none}
+.tc-tl-year{color:var(--primary);font-weight:700;flex-shrink:0;min-width:54px}
+.tc-tl-text{color:var(--text);line-height:1.4}
+/* Şehit satırı */
+.tc-sehit-item{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.tc-sehit-item:last-child{border-bottom:none}
+.tc-sehit-name{color:var(--text);font-weight:600}
+.tc-sehit-date{color:var(--text-muted);flex-shrink:0;margin-left:8px}
+/* Muhtar satırı */
+.tc-muhtar-item{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px}
+.tc-muhtar-item:last-child{border-bottom:none}
+.tc-muhtar-name{color:var(--text);font-weight:600}
+.tc-muhtar-donem{color:var(--text-muted);flex-shrink:0;margin-left:8px}
+
 /* CHIP FILTER */
 .chip-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px;scrollbar-width:none}
 .chip-row::-webkit-scrollbar{display:none}
@@ -329,13 +357,8 @@ textarea.form-input{resize:none;min-height:72px}
       <div class="loading" style="grid-column:1/-1"><div class="spinner"></div></div>
     </div>
     <div class="sec-title">Hızlı Bakış</div>
-    <div class="card">
-      <div class="card-body">
-        <div class="timeline" id="hizli-bakis-timeline">
-          <div class="loading"><div class="spinner"></div></div>
-        </div>
-        <button onclick="openSection('kronoloji')" style="background:none;border:1px solid var(--primary);color:var(--primary);border-radius:8px;padding:7px 16px;font-size:12px;cursor:pointer;font-weight:500;width:100%;margin-top:6px">Tam Kronoloji →</button>
-      </div>
+    <div id="tarih-preview-cards" class="tarih-cards">
+      <div class="loading"><div class="spinner"></div></div>
     </div>
   </section>
 
@@ -491,7 +514,7 @@ async function init() {
   loadMiniSozluk();
   loadGununBilmecesi();
   loadPageGrids();
-  loadHizliBakis();
+  loadTarihPreviewCards();
   handleDeepLink();
 }
 
@@ -926,9 +949,7 @@ function initBilmeceBtns() {} // hooks handled via onclick in HTML
 // ── SAYFA GRİDLERİ (Kültür / Tarih) ─────────────────────────
 async function loadPageGrids() {
   try {
-    const sections = cache.sections || await getSections();
-    if (!cache.sections) cache.sections = sections;
-
+    const sections = cache.sections || [];
     ['kultur', 'tarih'].forEach(page => {
       const grid = document.getElementById(`${page}-grid`);
       if (!grid) return;
@@ -945,35 +966,86 @@ async function loadPageGrids() {
   }
 }
 
-// ── HIZLI BAKIŞ TİMELINE ─────────────────────────────────────
-async function loadHizliBakis() {
-  const el = document.getElementById('hizli-bakis-timeline');
-  if (!el) return;
+// ── TARİH ÖNIZLEME KARTLARI ──────────────────────────────────
+async function loadTarihPreviewCards() {
+  const wrap = document.getElementById('tarih-preview-cards');
+  if (!wrap) return;
   try {
-    const data = await getSectionWithContent('kronoloji');
-    // Sadece list_item tipindeki blokları al, ilk 7'sini göster
-    const items = data.blocks
+    const [kronoloji, canakkale, muhtarlar] = await Promise.all([
+      getSectionWithContent('kronoloji'),
+      getSectionWithContent('canakkale'),
+      getSectionWithContent('muhtarlar'),
+    ]);
+
+    // Kronoloji — ilk 6 list_item
+    const kronoHTML = kronoloji.blocks
       .filter(b => b.type === 'list_item')
-      .slice(0, 7);
+      .slice(0, 6)
+      .map(b => {
+        const year = b.meta?.year || '';
+        const text = b.content.replace(/^\d[\d\s\.–—-]*—?\s*/, '').trim();
+        return `<div class="tc-tl-item">
+          <span class="tc-tl-year">${year}</span>
+          <span class="tc-tl-text">${text}</span>
+        </div>`;
+      }).join('');
 
-    if (!items.length) { el.innerHTML = ''; return; }
+    // Çanakkale — ilk 6 table_row
+    const sehitHTML = canakkale.blocks
+      .filter(b => b.type === 'table_row')
+      .slice(0, 6)
+      .map(b => {
+        const cols = b.meta?.cols || [];
+        return `<div class="tc-sehit-item">
+          <span class="tc-sehit-name">${cols[1] || '—'}</span>
+          <span class="tc-sehit-date">${cols[5] || ''}</span>
+        </div>`;
+      }).join('');
 
-    el.innerHTML = items.map(b => {
-      const year = b.meta?.year || '';
-      // "1968 — İlk 350 Nikferli..." formatını ayır
-      const text = year
-        ? b.content.replace(/^\d[\d\s\.–—-]*—?\s*/, '').trim()
-        : b.content;
-      return `<div class="tl-item">
-        <div class="tl-dot"></div>
-        ${year ? `<div class="tl-year">${year}</div>` : ''}
-        <div class="tl-text">${text}</div>
+    // Muhtarlar — ilk 6 table_row
+    const muhtarHTML = muhtarlar.blocks
+      .filter(b => b.type === 'table_row')
+      .slice(0, 6)
+      .map(b => {
+        const cols = b.meta?.cols || [];
+        return `<div class="tc-muhtar-item">
+          <span class="tc-muhtar-name">${cols[1] || '—'}</span>
+          <span class="tc-muhtar-donem">${cols[2] || ''}</span>
+        </div>`;
+      }).join('');
+
+    wrap.innerHTML = `
+      <div class="tarih-card">
+        <div class="tarih-card-header">
+          <i class="ti ti-timeline"></i><h3>Kronoloji</h3>
+        </div>
+        <div class="tarih-card-body">${kronoHTML}</div>
+        <div class="tarih-card-footer">
+          <button onclick="openSection('kronoloji')">Tam Kronoloji →</button>
+        </div>
+      </div>
+      <div class="tarih-card">
+        <div class="tarih-card-header">
+          <i class="ti ti-flag"></i><h3>Çanakkale Şehitlerimiz</h3>
+        </div>
+        <div class="tarih-card-body">${sehitHTML}</div>
+        <div class="tarih-card-footer">
+          <button onclick="openSection('canakkale')">Tüm Şehitler →</button>
+        </div>
+      </div>
+      <div class="tarih-card">
+        <div class="tarih-card-header">
+          <i class="ti ti-building-community"></i><h3>Muhtarlarımız</h3>
+        </div>
+        <div class="tarih-card-body">${muhtarHTML}</div>
+        <div class="tarih-card-footer">
+          <button onclick="openSection('muhtarlar')">Tüm Liste →</button>
+        </div>
       </div>`;
-    }).join('');
+
   } catch(e) {
-    // Hata durumunda timeline'ı gizle
-    el.innerHTML = '';
-    console.error('loadHizliBakis hatası:', e);
+    wrap.innerHTML = '';
+    console.error('loadTarihPreviewCards hatası:', e);
   }
 }
 
