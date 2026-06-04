@@ -982,8 +982,18 @@ async function loadTarihPreviewCards() {
       .filter(b => b.type === 'list_item')
       .slice(0, 6)
       .map(b => {
-        const year = b.meta?.year || '';
-        const text = b.content.replace(/^\d[\d\s\.–—-]*—?\s*/, '').trim();
+        // Önce meta.year'a bak, yoksa içerikten parse et
+        let year = b.meta?.year || '';
+        let text = b.content;
+        if (!year) {
+          const match = text.match(/^(\d{3,4}(?:\s*[–—-]\s*\d{2,4})?)\s*[–—-]\s*/);
+          if (match) {
+            year = match[1];
+            text = text.slice(match[0].length).trim();
+          }
+        } else {
+          text = text.replace(/^\d[\d\s\.–—-]*—?\s*/, '').trim();
+        }
         return `<div class="tc-tl-item">
           <span class="tc-tl-year">${year}</span>
           <span class="tc-tl-text">${text}</span>
