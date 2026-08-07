@@ -1,1 +1,24 @@
+name: Supabase Ping
 
+on:
+  schedule:
+    - cron: '0 7 * * 1'  # Her Pazartesi 07:00 UTC (Türkiye 10:00)
+  workflow_dispatch:      # Manuel tetikleme de mümkün
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase'e ping gönder
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.VITE_SUPABASE_URL }}/rest/v1/ayarlar?select=anahtar&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "HTTP yanıt kodu: $response"
+          if [ "$response" = "200" ]; then
+            echo "✓ Supabase aktif ve yanıt veriyor."
+          else
+            echo "⚠ Beklenmeyen yanıt: $response"
+            exit 1
+          fi
