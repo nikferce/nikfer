@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🏡</text></svg>">
-<meta name="robots" content="noindex, nofollow">
 <title>Nikfer Belleği — Admin</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -121,22 +121,18 @@ select.form-control{cursor:pointer}
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-row{text-align:center;padding:30px;color:var(--text-muted);font-size:13px}
-/* Özel İçerik Editörü */
-.rte-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
-.rte-toolbar{border-bottom:1px solid var(--border);background:#faf7f2;padding:6px 8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-.rte-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--text);transition:all .15s;display:flex;align-items:center;gap:3px}
-.rte-btn:hover{background:var(--primary);color:#fff;border-color:var(--primary)}
-.rte-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.rte-btn i{font-size:14px}
-.rte-divider{width:1px;height:20px;background:var(--border);margin:0 2px}
-.rte-source{width:100%;min-height:120px;max-height:320px;border:none;outline:none;padding:10px 12px;font-size:13px;font-family:monospace;line-height:1.8;color:var(--text);resize:vertical;background:#fff}
-.rte-preview{min-height:120px;max-height:320px;overflow-y:auto;padding:10px 12px;font-size:13px;line-height:1.8;color:var(--text)}
-.rte-preview b,.rte-preview strong{font-weight:700}
-.rte-preview i,.rte-preview em{font-style:italic}
-.rte-preview a{color:var(--primary);text-decoration:underline}
-.rte-mode-badge{font-size:10px;color:var(--text-muted);margin-left:auto;padding:2px 8px;background:rgba(139,69,19,.06);border-radius:10px}
+/* Quill Editor Özelleştirme */
+.quill-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fff}
+.quill-wrap .ql-toolbar{border:none;border-bottom:1px solid var(--border);background:#faf7f2;padding:6px 8px;flex-wrap:wrap}
+.quill-wrap .ql-toolbar .ql-formats{margin-right:8px}
+.quill-wrap .ql-container{border:none;font-size:13px;min-height:120px;max-height:320px;overflow-y:auto}
+.quill-wrap .ql-editor{padding:10px 12px;line-height:1.8;color:var(--text)}
+.quill-wrap .ql-editor p{margin-bottom:6px}
 #block-content{display:none}
 .plain-editor{display:block}
+.quill-wrap{display:none}
+.show-quill .quill-wrap{display:block}
+.show-quill #block-content-plain{display:none}
 
 /* MOBILE RESPONSIVE */
 @media(max-width:768px){
@@ -193,6 +189,10 @@ select.form-control{cursor:pointer}
       <button class="nav-link" onclick="showPanel('links',this)"><i class="ti ti-link"></i>Linkler</button>
 
       <div class="nav-group-title">Topluluk</div>
+      <button class="nav-link" onclick="showPanel('deceased',this)">
+        <i class="ti ti-candle"></i>Vefat Kayıtları
+        <span id="pending-deceased-badge" style="margin-left:auto;background:var(--danger);color:#FFF;font-size:10px;padding:2px 7px;border-radius:10px;display:none"></span>
+      </button>
       <button class="nav-link" onclick="showPanel('comments',this)">
         <i class="ti ti-message-circle"></i>Yorumlar
         <span id="pending-badge" style="margin-left:auto;background:var(--danger);color:#FFF;font-size:10px;padding:2px 7px;border-radius:10px;display:none"></span>
@@ -215,11 +215,13 @@ select.form-control{cursor:pointer}
       <div class="panel-header">
         <div><div class="panel-title">Kontrol Paneli</div><div class="panel-subtitle">Nikfer Belleği genel durumu</div></div>
       </div>
-      <div class="stats-grid" id="dash-stats">
+      <div class="stats-grid" id="dash-stats" style="grid-template-columns:repeat(3,1fr)">
         <div class="stat-box"><div class="num" id="ds-sections">—</div><div class="lbl">Bölüm</div></div>
         <div class="stat-box"><div class="num" id="ds-blocks">—</div><div class="lbl">İçerik Bloğu</div></div>
         <div class="stat-box"><div class="num" id="ds-comments">—</div><div class="lbl">Onaylı Yorum</div></div>
+        <div class="stat-box"><div class="num" id="ds-deceased">—</div><div class="lbl">Vefat Kaydı</div></div>
         <div class="stat-box"><div class="num" id="ds-pending" style="color:var(--danger)">—</div><div class="lbl">Onay Bekleyen</div></div>
+        <div class="stat-box"><div class="num" id="ds-pending-deceased" style="color:var(--danger)">—</div><div class="lbl">Vefat Öneri</div></div>
       </div>
       <div class="card">
         <div class="card-header"><h3>Son Yorumlar (Onay Bekleyen)</h3></div>
@@ -435,67 +437,155 @@ select.form-control{cursor:pointer}
       </div>
     </div>
 
-    <!-- YEDEK PANELİ -->
-    <div id="panel-backup" class="panel">
+    <!-- VEFAT KAYITLARI -->
+    <div id="panel-deceased" class="panel">
       <div class="panel-header">
-        <div>
-          <div class="panel-title">Yedek Al / Yükle</div>
-          <div class="panel-subtitle">Tüm içeriği JSON formatında indirin veya geri yükleyin</div>
-        </div>
-        <button class="btn btn-primary" onclick="runBackup()">
-          <i class="ti ti-database-export"></i> Şimdi Yedekle
+        <div><div class="panel-title">Vefat Kayıtları</div><div class="panel-subtitle">Kayıtları yönetin, öneri bekleyenleri onaylayın</div></div>
+        <button class="btn btn-primary" onclick="openDeceasedModal()"><i class="ti ti-plus"></i> Yeni Kayıt</button>
+      </div>
+      <div id="deceased-admin-alert"></div>
+
+      <!-- Sekmeler -->
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button class="btn btn-primary btn-sm" onclick="loadDeceasedAdmin('all',this)" id="dtab-all">Tüm Kayıtlar</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadDeceasedAdmin('pending',this)" id="dtab-pending">
+          Onay Bekleyen <span id="pending-count" style="background:var(--danger);color:#FFF;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px"></span>
         </button>
       </div>
 
-      <div class="alert" style="background:rgba(41,128,185,.08);color:#1A5276;border:1px solid rgba(41,128,185,.2);margin-bottom:16px">
-        <i class="ti ti-info-circle" style="margin-right:6px"></i>
-        Yedek; bölümler, içerik blokları, yorumlar, ses dosyaları, galeri ve linkleri kapsar.
-        Dosyalar (görseller, sesler) Supabase Storage'da kalır — bu yedek yalnızca <strong>veritabanı kayıtlarını</strong> içerir.
-      </div>
-
-      <!-- Yedek yükle -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><h3><i class="ti ti-database-import" style="margin-right:6px"></i>Yedek Yükle</h3></div>
-        <div class="card-body">
-          <div class="alert" style="background:rgba(200,50,50,.08);color:#8B1A1A;border:1px solid rgba(200,50,50,.2);margin-bottom:12px">
-            <i class="ti ti-alert-triangle" style="margin-right:6px"></i>
-            <strong>Dikkat:</strong> Yükleme mevcut verilerin üzerine yazar. Önce yedek alın!
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <input type="file" id="restore-file" accept=".json"
-              style="flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;background:var(--bg)">
-            <button class="btn btn-danger" onclick="runRestore()" style="background:#8B1A1A;color:#fff;border:none;flex-shrink:0">
-              <i class="ti ti-upload"></i> Yükle
-            </button>
-          </div>
-          <div id="restore-log" style="font-family:monospace;font-size:12px;color:var(--text-muted);min-height:40px;line-height:1.8;margin-top:10px"></div>
+      <!-- Arama -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div class="search-wrap" style="flex:1;margin:0">
+          <i class="ti ti-search"></i>
+          <input type="text" id="deceased-admin-search" placeholder="İsim ara..." oninput="filterDeceasedAdmin()" class="form-control" style="padding-left:36px">
         </div>
+        <select id="deceased-admin-year" onchange="filterDeceasedAdmin()" class="form-control" style="max-width:120px">
+          <option value="">Tüm Yıllar</option>
+        </select>
       </div>
 
+      <!-- Tablo -->
       <div class="card">
-        <div class="card-header"><h3>Yedeklenecek Tablolar</h3></div>
-        <div class="card-body" style="padding:0">
+        <div class="tbl-wrap">
           <table class="data-table">
             <thead>
-              <tr><th>Tablo</th><th>Kayıt Sayısı</th><th>Durum</th><th style="width:140px">İndir</th></tr>
+              <tr>
+                <th>Ad Soyad</th>
+                <th>Vefat Tarihi</th>
+                <th>Cenaze</th>
+                <th>Durum</th>
+                <th style="width:160px">İşlem</th>
+              </tr>
             </thead>
-            <tbody id="backup-tbody">
-              <tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>
+            <tbody id="deceased-tbody">
+              <tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <div class="card">
+      <!-- Sayfalama -->
+      <div id="deceased-pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;color:var(--text-muted)">
+        <span id="deceased-count-info"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" id="deceased-prev" onclick="deceasedPage(-1)"><i class="ti ti-chevron-left"></i></button>
+          <span id="deceased-page-info" style="padding:5px 10px;font-weight:600"></span>
+          <button class="btn btn-ghost btn-sm" id="deceased-next" onclick="deceasedPage(1)"><i class="ti ti-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- YEDEK AL -->
+    <div id="panel-backup" class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Yedek Al</div>
+          <div class="panel-subtitle">Tüm veritabanını JSON veya CSV olarak indirin</div>
+        </div>
+        <button class="btn btn-primary" onclick="loadBackupPreview()">
+          <i class="ti ti-refresh"></i> Yenile
+        </button>
+      </div>
+
+      <div id="backup-alert"></div>
+
+      <!-- Tablo özeti -->
+      <div class="stats-grid" id="backup-stats" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat-box"><div class="num" id="bk-sections">—</div><div class="lbl">Bölüm</div></div>
+        <div class="stat-box"><div class="num" id="bk-blocks">—</div><div class="lbl">İçerik Bloğu</div></div>
+        <div class="stat-box"><div class="num" id="bk-audio">—</div><div class="lbl">Ses Dosyası</div></div>
+        <div class="stat-box"><div class="num" id="bk-gallery">—</div><div class="lbl">Fotoğraf</div></div>
+        <div class="stat-box"><div class="num" id="bk-links">—</div><div class="lbl">Link</div></div>
+        <div class="stat-box"><div class="num" id="bk-comments">—</div><div class="lbl">Yorum</div></div>
+      </div>
+
+      <!-- JSON Yedek -->
+      <div class="card" style="margin-top:16px">
         <div class="card-header">
-          <h3>İşlem Günlüğü</h3>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('backup-log').innerHTML=''">
-            <i class="ti ti-trash"></i> Temizle
-          </button>
+          <h3><i class="ti ti-file-type-json" style="margin-right:6px;color:var(--accent-light)"></i>JSON Yedek</h3>
         </div>
         <div class="card-body">
-          <div id="backup-log" style="font-family:monospace;font-size:12px;color:var(--text-muted);min-height:60px;line-height:1.8">
-            Yedek almak için "Şimdi Yedekle" butonuna tıklayın.
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+            Tüm tabloları tek bir JSON dosyasında indirir. Tam geri yükleme için idealdir.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="downloadJSON('all')">
+              <i class="ti ti-download"></i> Tümünü İndir (JSON)
+            </button>
+            <button class="btn btn-ghost" onclick="downloadJSON('sections')">
+              <i class="ti ti-download"></i> Bölümler
+            </button>
+            <button class="btn btn-ghost" onclick="downloadJSON('content_blocks')">
+              <i class="ti ti-download"></i> İçerik Blokları
+            </button>
+            <button class="btn btn-ghost" onclick="downloadJSON('comments')">
+              <i class="ti ti-download"></i> Yorumlar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV Yedek -->
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="ti ti-file-type-csv" style="margin-right:6px;color:var(--accent-light)"></i>CSV Yedek</h3>
+        </div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">
+            Her tabloyu ayrı CSV dosyası olarak indirir. Excel ile açılabilir.
+          </p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" onclick="downloadCSV('sections')">
+              <i class="ti ti-download"></i> Bölümler.csv
+            </button>
+            <button class="btn btn-ghost" onclick="downloadCSV('content_blocks')">
+              <i class="ti ti-download"></i> İçerikler.csv
+            </button>
+            <button class="btn btn-ghost" onclick="downloadCSV('audio_files')">
+              <i class="ti ti-download"></i> Ses Dosyaları.csv
+            </button>
+            <button class="btn btn-ghost" onclick="downloadCSV('gallery')">
+              <i class="ti ti-download"></i> Fotoğraflar.csv
+            </button>
+            <button class="btn btn-ghost" onclick="downloadCSV('links')">
+              <i class="ti ti-download"></i> Linkler.csv
+            </button>
+            <button class="btn btn-ghost" onclick="downloadCSV('comments')">
+              <i class="ti ti-download"></i> Yorumlar.csv
+            </button>
+            <button class="btn btn-primary" onclick="downloadAllCSV()">
+              <i class="ti ti-download"></i> Tümünü İndir (Ayrı CSV)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Son yedek bilgisi -->
+      <div class="card">
+        <div class="card-header"><h3>Son Yedek</h3></div>
+        <div class="card-body">
+          <div id="last-backup-info" style="font-size:13px;color:var(--text-muted)">
+            Henüz bu oturumda yedek alınmadı.
           </div>
         </div>
       </div>
@@ -567,17 +657,6 @@ select.form-control{cursor:pointer}
           </span>
         </label>
       </div>
-      <div class="form-group">
-        <label class="form-label">
-          📂 Sayfa
-          <span style="font-size:10px;font-weight:400;color:var(--text-muted);margin-left:4px">Alt menüde nerede görünsün?</span>
-        </label>
-        <select class="form-control" id="section-page">
-          <option value="">— Sadece Ana Sayfa —</option>
-          <option value="kultur">Kültür</option>
-          <option value="tarih">Tarih</option>
-        </select>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('section-modal')">İptal</button>
@@ -625,25 +704,9 @@ select.form-control{cursor:pointer}
         <!-- Düz metin alanı (şiir, tablo, kod vb. için) -->
         <textarea class="form-control plain-editor" id="block-content-plain" rows="5"
           placeholder="İçeriği buraya yazın..."></textarea>
-        <!-- Özel zengin metin editörü (paragraf, alıntı, madde için) -->
-        <div class="rte-wrap" id="rte-wrap" style="display:none">
-          <div class="rte-toolbar">
-            <button type="button" class="rte-btn" onclick="rteFormat('bold')" title="Kalın"><i class="ti ti-bold"></i></button>
-            <button type="button" class="rte-btn" onclick="rteFormat('italic')" title="İtalik"><i class="ti ti-italic"></i></button>
-            <button type="button" class="rte-btn" onclick="rteFormat('underline')" title="Altı Çizili"><i class="ti ti-underline"></i></button>
-            <div class="rte-divider"></div>
-            <button type="button" class="rte-btn" onclick="rteLink()" title="Link ekle"><i class="ti ti-link"></i></button>
-            <button type="button" class="rte-btn" onclick="rteClear()" title="Formatı temizle"><i class="ti ti-clear-formatting"></i></button>
-            <div class="rte-divider"></div>
-            <button type="button" class="rte-btn" id="rte-toggle-btn" onclick="rteToggleMode()" title="Kaynak / Önizleme">
-              <i class="ti ti-code"></i> Kaynak
-            </button>
-            <span class="rte-mode-badge" id="rte-mode-badge">Görsel Mod</span>
-          </div>
-          <!-- Kaynak modu -->
-          <textarea class="rte-source" id="rte-source" placeholder="HTML içerik buraya..."></textarea>
-          <!-- Önizleme modu -->
-          <div class="rte-preview" id="rte-preview" style="display:none"></div>
+        <!-- Zengin metin editörü (paragraf, alıntı, madde için) -->
+        <div class="quill-wrap">
+          <div id="quill-editor"></div>
         </div>
         <!-- Gizli alan — her zaman ham değeri saklar -->
         <textarea id="block-content" style="display:none"></textarea>
@@ -657,6 +720,62 @@ select.form-control{cursor:pointer}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('block-modal')">İptal</button>
       <button class="btn btn-primary" onclick="saveBlockUI()"><i class="ti ti-check"></i> Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vefat Kayıt Modal -->
+<div class="modal-bg" id="deceased-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="deceased-modal-title">Yeni Vefat Kaydı</h3>
+      <button class="modal-close" onclick="closeModal('deceased-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="deceased-modal-alert"></div>
+      <input type="hidden" id="dm-id">
+      <div class="form-group">
+        <label class="form-label">Ad Soyad *</label>
+        <input class="form-control" id="dm-name" placeholder="Nasuhların Abdullah oğlu 1959 doğumlu Ahmet KEYSAN">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Vefat Tarihi *</label>
+          <input class="form-control" type="date" id="dm-death-date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cenaze Namazı Tarihi</label>
+          <input class="form-control" type="date" id="dm-funeral-date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Cenaze Saati</label>
+          <input class="form-control" id="dm-funeral-time" placeholder="14:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cenaze Yeri</label>
+          <input class="form-control" id="dm-funeral-place" placeholder="Çarşı Camii">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Defin Yeri</label>
+        <input class="form-control" id="dm-burial-place" placeholder="Nikfer Mezarlığı">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Not</label>
+        <textarea class="form-control" id="dm-notes" rows="2" placeholder="Ek bilgi..."></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="dm-published" checked>
+          <span class="form-label" style="margin:0">Yayında</span>
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deceased-modal')">İptal</button>
+      <button class="btn btn-primary" onclick="saveDeceasedUI()"><i class="ti ti-check"></i> Kaydet</button>
     </div>
   </div>
 </div>
@@ -777,6 +896,7 @@ select.form-control{cursor:pointer}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script type="module">
 import {
   supabase,
@@ -787,38 +907,61 @@ import {
   uploadImage, updateImage, deleteImage, getGallery,
   getLinks, createLink, updateLink, deleteLink,
   getAllComments, approveComment, pinComment, deleteComment,
-  getSiteSettings, updateSiteSetting, getStatCounts
+  getSiteSettings, updateSiteSetting, getStatCounts,
+  getAllDeceased, createDeceased, updateDeceased, deleteDeceased,
+  getPendingDeceased, verifyDeceased
 } from './db.js';
 
 let sections = [];
 let currentSection = null;
 
-// ── ÖZEL İÇERİK EDİTÖRÜ (RTE) ───────────────────────────────
+// ── AUTH ─────────────────────────────────────────────────────
+// ── QUILL EDITOR ─────────────────────────────────────────────
+let quillInstance = null;
+
+function initQuill() {
+  if (quillInstance) return; // Zaten başlatılmış
+  quillInstance = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Paragraf metnini buraya yazın...',
+    modules: {
+      toolbar: [
+        [{ 'header': [2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        ['blockquote'],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'align': [] }],
+        ['link'],
+        ['clean']
+      ]
+    }
+  });
+}
+
+// Zengin editör mi düz metin mi gösterileceğini belirle
 const RICH_TEXT_TYPES = ['paragraph', 'quote', 'list_item', 'heading'];
-let _rteMode = 'source'; // 'source' | 'preview'
 
 function setEditorMode(type) {
-  const plain  = document.getElementById('block-content-plain');
-  const rteWrap = document.getElementById('rte-wrap');
+  const group   = document.getElementById('block-content-group');
+  const plain   = document.getElementById('block-content-plain');
   if (RICH_TEXT_TYPES.includes(type)) {
-    plain.style.display   = 'none';
-    rteWrap.style.display = 'block';
+    group.classList.add('show-quill');
+    initQuill();
   } else {
-    plain.style.display   = 'block';
-    rteWrap.style.display = 'none';
+    group.classList.remove('show-quill');
   }
 }
 
-// Kaydet butonuna basılmadan önce değeri gizli alana yaz
+// Quill içeriğini gizli textarea'ya senkronize et (kaydetmeden önce)
 function syncQuillToTextarea() {
   const type = document.getElementById('block-type').value;
-  if (RICH_TEXT_TYPES.includes(type)) {
-    let val = document.getElementById('rte-source').value.trim();
-    // Boş satır (2+ enter) = paragraf bölümü
-    val = val.replace(/\n{2,}/g, '</p><p>');
-    // Tek satır sonu = <br>
-    val = val.replace(/\n/g, '<br>');
-    document.getElementById('block-content').value = val;
+  if (RICH_TEXT_TYPES.includes(type) && quillInstance) {
+    const html = quillInstance.getSemanticHTML();
+    // Sadece içerik varsa al; boş paragraf bırakma
+    const clean = html === '<p></p>' || html === '<p><br></p>' ? '' : html;
+    document.getElementById('block-content').value = clean;
   } else {
     document.getElementById('block-content').value =
       document.getElementById('block-content-plain').value;
@@ -827,102 +970,20 @@ function syncQuillToTextarea() {
 
 // Editörü doldur (düzenle modunda)
 function fillEditor(type, value) {
-  setEditorMode(type);
   if (RICH_TEXT_TYPES.includes(type)) {
-    // Kaydedilen </p><p> ve <br> formatını editör için satır sonuna çevir
-    let display = value || '';
-    display = display.replace(/<\/p><p>/gi, '\n\n');
-    display = display.replace(/<br\s*\/?>/gi, '\n');
-    document.getElementById('rte-source').value = display;
-    if (_rteMode === 'preview') rteShowPreview();
+    setEditorMode(type);
+    if (quillInstance) {
+      if (value && value.trim().startsWith('<')) {
+        quillInstance.clipboard.dangerouslyPasteHTML(value);
+      } else {
+        quillInstance.setText(value || '');
+      }
+    }
   } else {
+    setEditorMode(type);
     document.getElementById('block-content-plain').value = value || '';
   }
 }
-
-// Kaynak / Önizleme toggle
-window.rteToggleMode = function() {
-  const src     = document.getElementById('rte-source');
-  const preview = document.getElementById('rte-preview');
-  const btn     = document.getElementById('rte-toggle-btn');
-  const badge   = document.getElementById('rte-mode-badge');
-
-  if (_rteMode === 'source') {
-    _rteMode = 'preview';
-    src.style.display     = 'none';
-    preview.style.display = 'block';
-    preview.innerHTML     = src.value || '<span style="color:var(--text-muted);font-size:12px">İçerik yok</span>';
-    btn.innerHTML   = '<i class="ti ti-edit"></i> Düzenle';
-    badge.textContent = 'Önizleme Modu';
-    btn.classList.add('active');
-  } else {
-    _rteMode = 'source';
-    src.style.display     = 'block';
-    preview.style.display = 'none';
-    btn.innerHTML   = '<i class="ti ti-code"></i> Kaynak';
-    badge.textContent = 'Kaynak Modu';
-    btn.classList.remove('active');
-  }
-};
-
-function rteShowPreview() {
-  const src     = document.getElementById('rte-source');
-  const preview = document.getElementById('rte-preview');
-  preview.innerHTML = src.value || '';
-}
-
-// Format butonları — seçili metne tag sarar
-window.rteFormat = function(tag) {
-  // Önizleme modundaysa kaynak moda geç
-  if (_rteMode === 'preview') rteToggleMode();
-
-  const ta    = document.getElementById('rte-source');
-  const start = ta.selectionStart;
-  const end   = ta.selectionEnd;
-  const sel   = ta.value.substring(start, end);
-
-  const tagMap = { bold: 'b', italic: 'i', underline: 'u' };
-  const t = tagMap[tag];
-  if (!t) return;
-
-  const wrapped = sel ? `<${t}>${sel}</${t}>` : `<${t}></${t}>`;
-  ta.setRangeText(wrapped, start, end, 'end');
-  ta.focus();
-};
-
-// Link ekle
-window.rteLink = function() {
-  // Önizleme modundaysa kaynak moda geç
-  if (_rteMode === 'preview') rteToggleMode();
-
-  const ta    = document.getElementById('rte-source');
-  const start = ta.selectionStart;
-  const end   = ta.selectionEnd;
-  const sel   = ta.value.substring(start, end);
-  const url   = prompt('Link URL:', 'https://');
-  if (!url) return;
-  const text    = sel || url;
-  const wrapped = `<a href="${url}" target="_blank">${text}</a>`;
-  ta.setRangeText(wrapped, start, end, 'end');
-  ta.focus();
-};
-
-// Format temizle — basit HTML etiketlerini kaldır
-window.rteClear = function() {
-  // Önizleme modundaysa kaynak moda geç
-  if (_rteMode === 'preview') rteToggleMode();
-
-  const ta    = document.getElementById('rte-source');
-  const start = ta.selectionStart;
-  const end   = ta.selectionEnd;
-  const sel   = ta.value.substring(start, end);
-  if (!sel) return;
-  const clean = sel.replace(/<[^>]+>/g, '');
-  ta.setRangeText(clean, start, end, 'end');
-  ta.focus();
-};
-
-
 
 onAuthChange((event, session) => {
   if (session) showAdmin();
@@ -985,27 +1046,37 @@ window.showPanel = function(id, btn) {
   if (id === 'sections') loadSections();
   if (id === 'comments') loadComments('all');
   if (id === 'settings') loadSettings();
-  if (id === 'backup')   loadBackupStats();
+  if (id === 'backup')   loadBackupPreview();
+  if (id === 'deceased') loadDeceasedAdmin();
 };
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 async function loadDashboard() {
   try {
-    const [{ count: sc }, { count: bc }, { count: ac }, { count: pc }] = await Promise.all([
+    const [{ count: sc }, { count: bc }, { count: ac }, { count: pc },
+           { count: dc }, { count: dpc }] = await Promise.all([
       supabase.from('sections').select('*', { count:'exact', head:true }),
       supabase.from('content_blocks').select('*', { count:'exact', head:true }),
       supabase.from('comments').select('*', { count:'exact', head:true }).eq('is_approved', true),
       supabase.from('comments').select('*', { count:'exact', head:true }).eq('is_approved', false),
+      supabase.from('deceased').select('*', { count:'exact', head:true }).eq('is_published', true),
+      supabase.from('deceased').select('*', { count:'exact', head:true }).eq('is_verified', false),
     ]);
-    document.getElementById('ds-sections').textContent = sc || 0;
-    document.getElementById('ds-blocks').textContent   = bc || 0;
-    document.getElementById('ds-comments').textContent = ac || 0;
-    document.getElementById('ds-pending').textContent  = pc || 0;
+    document.getElementById('ds-sections').textContent          = sc  || 0;
+    document.getElementById('ds-blocks').textContent            = bc  || 0;
+    document.getElementById('ds-comments').textContent          = ac  || 0;
+    document.getElementById('ds-pending').textContent           = pc  || 0;
+    document.getElementById('ds-deceased').textContent          = dc  || 0;
+    document.getElementById('ds-pending-deceased').textContent  = dpc || 0;
 
     if (pc > 0) {
       const badge = document.getElementById('pending-badge');
       badge.textContent = pc;
       badge.style.display = 'inline-block';
+    }
+    if (dpc > 0) {
+      const badge2 = document.getElementById('pending-deceased-badge');
+      if (badge2) { badge2.textContent = dpc; badge2.style.display = 'inline-block'; }
     }
 
     // Pending comments list
@@ -1148,7 +1219,6 @@ window.openSectionModal = function() {
   document.getElementById('section-id').value = '';
   ['section-title','section-subtitle','section-slug','section-icon','section-sort'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('section-visible').checked = true;
-  document.getElementById('section-page').value = '';
   openModal('section-modal');
 };
 
@@ -1167,9 +1237,10 @@ window.editSection = function(s) {
   document.getElementById('section-icon').value            = s.icon || '';
   document.getElementById('section-sort').value            = s.sort_order;
   document.getElementById('section-visible').checked       = s.is_visible;
-  document.getElementById('section-comments').checked      = s.comments_enabled !== false;
-  document.getElementById('section-featured').checked      = s.is_featured === true;
-  document.getElementById('section-page').value            = s.page || '';
+  document.getElementById('section-comments').checked      =
+    s.comments_enabled !== false;
+  document.getElementById('section-featured').checked      =
+    s.is_featured === true;
   openModal('section-modal');
 };
 
@@ -1185,7 +1256,6 @@ window.saveSectionUI = async function() {
     is_visible:       document.getElementById('section-visible').checked,
     comments_enabled: document.getElementById('section-comments').checked,
     is_featured:      document.getElementById('section-featured').checked,
-    page:             document.getElementById('section-page').value || null,
   };
   if (!payload.title || !payload.slug) {
     alert.innerHTML = '<div class="alert alert-danger">Başlık ve slug zorunludur.</div>'; return;
@@ -1203,32 +1273,9 @@ window.saveSectionUI = async function() {
 
 window.deleteSectionUI = async function(id) {
   if (!confirm('Bu bölümü ve tüm içeriğini silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return;
-
-  try {
-    // 1. Storage'daki dosyaları bul
-    const [audioRes, galleryRes] = await Promise.all([
-      supabase.from('audio_files').select('file_path').eq('section_id', id),
-      supabase.from('gallery').select('file_path').eq('section_id', id),
-    ]);
-
-    const paths = [
-      ...(audioRes.data || []).map(f => f.file_path),
-      ...(galleryRes.data || []).map(f => f.file_path),
-    ].filter(Boolean);
-
-    // 2. Storage'dan sil
-    if (paths.length) {
-      const { error: storageErr } = await supabase.storage.from('nikfer-media').remove(paths);
-      if (storageErr) console.warn('Bazı dosyalar Storage\'dan silinemedi:', storageErr.message);
-    }
-
-    // 3. Bölümü sil (ON DELETE CASCADE ile DB kayıtları otomatik temizlenir)
-    await deleteSection(id);
-    loadSections();
-    loadMasterData();
-  } catch(e) {
-    alert('Silme hatası: ' + e.message);
-  }
+  await deleteSection(id);
+  loadSections();
+  loadMasterData();
 };
 
 // ── CONTENT BLOCKS ────────────────────────────────────────────
@@ -1336,7 +1383,7 @@ window.openBlockModal = function() {
   document.getElementById('block-content-plain').value  = '';
   document.getElementById('block-meta').value           = '';
   document.getElementById('block-type').value           = 'paragraph';
-  document.getElementById('rte-source').value           = '';
+  if (quillInstance) quillInstance.setContents([]);
   onBlockTypeChange();
   if (_currentSectionId) {
     document.getElementById('block-section-id').value = _currentSectionId;
@@ -1373,9 +1420,9 @@ window.onBlockTypeChange = function() {
     info_row:  ['Değer', '{"value": "Denizli"}'],
     table_row: ['Tablo Kolonları', '{"cols": ["1","Ad","Dönem"]}'],
     list_item: ['Ek Veri', '{"answer": "Karpuz"} (bilmece için) veya {"desc": "Açıklama"}'],
-    quote:     ['Alıntı Sahibi', '{"author": "Musa ELBAŞI","year": "1912"}'],
+    quote:     ['Alıntı Sahibi', '{"author": "Süleyman Özkan"}'],
     poem:      ['Şair', '{"author": "Hüseyin Hatipoğlu", "year": "1947"}'],
-    note:      ['Dipnot/Kaynak', '{"author": "Kaynak: Süleyman ÖZKAN"}'],
+    note:      ['', '{}'],
   };
   if (hints[type]) {
     metaGroup.style.display = 'block';
@@ -1387,7 +1434,7 @@ window.onBlockTypeChange = function() {
 };
 
 window.saveBlockUI = async function() {
-  syncQuillToTextarea(); // Editör içeriğini textarea'ya aktar
+  syncQuillToTextarea(); // Quill içeriğini textarea'ya aktar
   const id      = document.getElementById('block-id').value;
   const alert   = document.getElementById('block-modal-alert');
   let meta = {};
@@ -1671,6 +1718,225 @@ window.openLinkEditModal = function(id) {
 };
 
 // ── COMMENTS ─────────────────────────────────────────────────
+// ── VEFAT KAYITLARI ──────────────────────────────────────────
+let _dPage       = 0;
+let _dLimit      = 50;
+let _dTotal      = 0;
+let _dTab        = 'all';
+let _dSearch     = '';
+let _dYear       = '';
+let _dCache      = [];
+
+window.loadDeceasedAdmin = async function(tab = 'all', btn = null) {
+  _dTab    = tab;
+  _dPage   = 0;
+
+  // Sekme butonları
+  document.querySelectorAll('[id^="dtab-"]').forEach(b => b.classList.replace('btn-primary','btn-ghost'));
+  const activeBtn = btn || document.getElementById('dtab-' + tab);
+  if (activeBtn) activeBtn.classList.replace('btn-ghost','btn-primary');
+
+  // Bekleyen sayısını güncelle
+  try {
+    const pending = await getPendingDeceased();
+    const pc = document.getElementById('pending-count');
+    if (pc) pc.textContent = pending.length || '';
+    const badge = document.getElementById('pending-deceased-badge');
+    if (badge) {
+      badge.textContent = pending.length;
+      badge.style.display = pending.length ? 'inline-block' : 'none';
+    }
+  } catch(e) {}
+
+  await renderDeceasedTable();
+};
+
+async function renderDeceasedTable() {
+  const tbody = document.getElementById('deceased-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="loading-row"><span class="spinner"></span></td></tr>';
+
+  try {
+    let data, count;
+
+    if (_dTab === 'pending') {
+      const rows = await getPendingDeceased();
+      data  = rows;
+      count = rows.length;
+    } else {
+      const result = await getAllDeceased({
+        search: _dSearch,
+        year:   _dYear,
+        limit:  _dLimit,
+        offset: _dPage * _dLimit,
+      });
+      data  = result.data;
+      count = result.count;
+    }
+
+    _dTotal = count;
+    _dCache = data;
+
+    // Yıl selectini doldur (ilk yüklemede)
+    const ySel = document.getElementById('deceased-admin-year');
+    if (ySel && ySel.options.length <= 1) {
+      const years = [...new Set(data.map(d => d.death_date ? new Date(d.death_date).getFullYear() : null).filter(Boolean))].sort((a,b) => b-a);
+      ySel.innerHTML = '<option value="">Tüm Yıllar</option>' +
+        years.map(y => `<option value="${y}">${y}</option>`).join('');
+    }
+
+    // Sayfalama
+    const info    = document.getElementById('deceased-count-info');
+    const pageInf = document.getElementById('deceased-page-info');
+    const prevBtn = document.getElementById('deceased-prev');
+    const nextBtn = document.getElementById('deceased-next');
+    if (info)    info.textContent    = `Toplam ${count} kayıt`;
+    if (pageInf) pageInf.textContent = `${_dPage + 1} / ${Math.max(1, Math.ceil(count / _dLimit))}`;
+    if (prevBtn) prevBtn.disabled    = _dPage === 0;
+    if (nextBtn) nextBtn.disabled    = (_dPage + 1) * _dLimit >= count;
+
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="loading-row">Kayıt bulunamadı.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.map(d => {
+      const dd = d.death_date   ? new Date(d.death_date).toLocaleDateString('tr-TR')   : '—';
+      const fd = d.funeral_date ? new Date(d.funeral_date).toLocaleDateString('tr-TR') : '—';
+      const funeralInfo = d.funeral_date ? `${fd}${d.funeral_time ? ' ' + d.funeral_time : ''}` : '—';
+
+      return `<tr>
+        <td>
+          <div style="font-size:13px;font-weight:500;color:var(--text)">${d.full_name}</div>
+          ${d.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${d.notes.slice(0,60)}${d.notes.length>60?'…':''}</div>` : ''}
+        </td>
+        <td style="font-size:12px;white-space:nowrap;color:#8B1A1A;font-weight:500">${dd}</td>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${funeralInfo}</td>
+        <td>
+          ${d.is_published ? '<span class="badge badge-green">Yayında</span>' : '<span class="badge badge-red">Gizli</span>'}
+          ${!d.is_verified ? '<span class="badge badge-yellow" style="display:block;margin-top:3px">Onay Bekliyor</span>' : ''}
+        </td>
+        <td>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${!d.is_verified ? `<button class="btn btn-success btn-sm btn-icon" title="Onayla" onclick="verifyDeceasedUI('${d.id}')"><i class="ti ti-check"></i></button>` : ''}
+            <button class="btn btn-ghost btn-sm btn-icon" title="Düzenle" onclick="editDeceasedUI('${d.id}')"><i class="ti ti-pencil"></i></button>
+            <button class="btn btn-danger btn-sm btn-icon" title="Sil" onclick="deleteDeceasedUI('${d.id}')"><i class="ti ti-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" class="loading-row">Hata: ${e.message}</td></tr>`;
+  }
+}
+
+window.deceasedPage = function(dir) {
+  const maxPage = Math.ceil(_dTotal / _dLimit) - 1;
+  _dPage = Math.max(0, Math.min(maxPage, _dPage + dir));
+  renderDeceasedTable();
+};
+
+let _dFilterTimer = null;
+window.filterDeceasedAdmin = function() {
+  _dSearch = document.getElementById('deceased-admin-search').value.trim();
+  _dYear   = document.getElementById('deceased-admin-year').value;
+  _dPage   = 0;
+  clearTimeout(_dFilterTimer);
+  _dFilterTimer = setTimeout(() => renderDeceasedTable(), 350);
+};
+
+// Modal aç — yeni kayıt
+window.openDeceasedModal = function() {
+  document.getElementById('deceased-modal-title').textContent = 'Yeni Vefat Kaydı';
+  document.getElementById('dm-id').value           = '';
+  document.getElementById('dm-name').value         = '';
+  document.getElementById('dm-death-date').value   = '';
+  document.getElementById('dm-funeral-date').value = '';
+  document.getElementById('dm-funeral-time').value = '';
+  document.getElementById('dm-funeral-place').value= '';
+  document.getElementById('dm-burial-place').value = '';
+  document.getElementById('dm-notes').value        = '';
+  document.getElementById('dm-published').checked  = true;
+  document.getElementById('deceased-modal-alert').innerHTML = '';
+  openModal('deceased-modal');
+};
+
+// Modal aç — düzenle
+window.editDeceasedUI = function(id) {
+  const d = _dCache.find(x => x.id === id);
+  if (!d) { alert('Kayıt bulunamadı, sayfayı yenileyin.'); return; }
+  document.getElementById('deceased-modal-title').textContent  = 'Vefat Kaydını Düzenle';
+  document.getElementById('dm-id').value            = d.id;
+  document.getElementById('dm-name').value          = d.full_name || '';
+  document.getElementById('dm-death-date').value    = d.death_date   || '';
+  document.getElementById('dm-funeral-date').value  = d.funeral_date || '';
+  document.getElementById('dm-funeral-time').value  = d.funeral_time || '';
+  document.getElementById('dm-funeral-place').value = d.funeral_place|| '';
+  document.getElementById('dm-burial-place').value  = d.burial_place || '';
+  document.getElementById('dm-notes').value         = d.notes        || '';
+  document.getElementById('dm-published').checked   = d.is_published;
+  document.getElementById('deceased-modal-alert').innerHTML = '';
+  openModal('deceased-modal');
+};
+
+// Kaydet
+window.saveDeceasedUI = async function() {
+  const id      = document.getElementById('dm-id').value;
+  const alertEl = document.getElementById('deceased-modal-alert');
+  const name    = document.getElementById('dm-name').value.trim();
+  const deathDt = document.getElementById('dm-death-date').value;
+  if (!name)    { alertEl.innerHTML = '<div class="alert alert-danger">Ad Soyad zorunludur.</div>'; return; }
+  if (!deathDt) { alertEl.innerHTML = '<div class="alert alert-danger">Vefat tarihi zorunludur.</div>'; return; }
+
+  const payload = {
+    full_name:     name,
+    death_date:    deathDt    || null,
+    funeral_date:  document.getElementById('dm-funeral-date').value  || null,
+    funeral_time:  document.getElementById('dm-funeral-time').value  || null,
+    funeral_place: document.getElementById('dm-funeral-place').value || null,
+    burial_place:  document.getElementById('dm-burial-place').value  || null,
+    notes:         document.getElementById('dm-notes').value         || null,
+    is_published:  document.getElementById('dm-published').checked,
+    is_verified:   true,
+  };
+
+  try {
+    if (id) await updateDeceased(id, payload);
+    else    await createDeceased(payload);
+    closeModal('deceased-modal');
+    renderDeceasedTable();
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+  }
+};
+
+// Onayla
+window.verifyDeceasedUI = async function(id) {
+  try {
+    await verifyDeceased(id);
+    renderDeceasedTable();
+    showToast('Kayıt onaylandı ve yayınlandı.');
+  } catch(e) { alert('Hata: ' + e.message); }
+};
+
+// Sil
+window.deleteDeceasedUI = async function(id) {
+  if (!confirm('Bu vefat kaydını silmek istediğinize emin misiniz?')) return;
+  try {
+    await deleteDeceased(id);
+    renderDeceasedTable();
+  } catch(e) { alert('Hata: ' + e.message); }
+};
+
+// Toast fonksiyonu (varsa atla)
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
 // ── AYARLAR ──────────────────────────────────────────────────
 async function loadSettings() {
   try {
@@ -1717,6 +1983,217 @@ window.saveSettingUI = async function(key, value) {
     alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
   }
 };
+
+// ── YEDEK FONKSİYONLARI ─────────────────────────────────────
+
+const TABLES = {
+  sections:       'Bölümler',
+  content_blocks: 'İçerik Blokları',
+  audio_files:    'Ses Dosyaları',
+  gallery:        'Fotoğraflar',
+  links:          'Linkler',
+  comments:       'Yorumlar',
+  site_settings:  'Site Ayarları',
+};
+
+// Tablodan tüm veriyi çek (pagination ile)
+async function fetchAllRows(table) {
+  let allData = [];
+  let from    = 0;
+  const PAGE  = 1000;
+
+  while (true) {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .range(from, from + PAGE - 1)
+      .order('created_at', { ascending: true, nullsFirst: true });
+
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    allData = allData.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return allData;
+}
+
+// Yedek önizleme — satır sayıları
+window.loadBackupPreview = async function() {
+  const alertEl = document.getElementById('backup-alert');
+  try {
+    const counts = await Promise.all(
+      Object.keys(TABLES).map(t =>
+        supabase.from(t).select('*', { count:'exact', head:true })
+      )
+    );
+    const tableKeys = Object.keys(TABLES);
+    const statIds   = ['bk-sections','bk-blocks','bk-audio','bk-gallery','bk-links','bk-comments'];
+
+    tableKeys.slice(0,6).forEach((t, i) => {
+      const el = document.getElementById(statIds[i]);
+      if (el) el.textContent = counts[i]?.count ?? '—';
+    });
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Önizleme yüklenemedi: ${e.message}</div>`;
+  }
+};
+
+// JSON indirme
+window.downloadJSON = async function(target) {
+  const alertEl = document.getElementById('backup-alert');
+  alertEl.innerHTML = '<div class="alert alert-success"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Hazırlanıyor...</div>';
+
+  try {
+    let backup = {};
+    const timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g, '-');
+
+    if (target === 'all') {
+      // Tüm tablolar
+      for (const table of Object.keys(TABLES)) {
+        backup[table] = await fetchAllRows(table);
+      }
+      backup._meta = {
+        exported_at:  new Date().toISOString(),
+        version:      '1.0',
+        description:  'Nikfer Belleği tam veritabanı yedeği',
+      };
+      triggerDownload(
+        JSON.stringify(backup, null, 2),
+        `nikfer-yedek-${timestamp}.json`,
+        'application/json'
+      );
+    } else {
+      // Tek tablo
+      const data = await fetchAllRows(target);
+      triggerDownload(
+        JSON.stringify({ [target]: data, _meta: { exported_at: new Date().toISOString() } }, null, 2),
+        `nikfer-${target}-${timestamp}.json`,
+        'application/json'
+      );
+    }
+
+    updateLastBackupInfo(target, 'JSON', new Date());
+    alertEl.innerHTML = '<div class="alert alert-success">✅ İndirme başladı!</div>';
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Hata: ${e.message}</div>`;
+  }
+};
+
+// CSV indirme — tek tablo
+window.downloadCSV = async function(table) {
+  const alertEl = document.getElementById('backup-alert');
+  alertEl.innerHTML = '<div class="alert alert-success"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Hazırlanıyor...</div>';
+
+  try {
+    const data = await fetchAllRows(table);
+    if (!data.length) {
+      alertEl.innerHTML = '<div class="alert alert-danger">Bu tabloda veri yok.</div>';
+      return;
+    }
+
+    const csv       = jsonToCSV(data);
+    const timestamp = new Date().toISOString().slice(0,10);
+    const label     = TABLES[table] || table;
+
+    triggerDownload(csv, `nikfer-${label}-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+    updateLastBackupInfo(table, 'CSV', new Date());
+    alertEl.innerHTML = '<div class="alert alert-success">✅ İndirme başladı!</div>';
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Hata: ${e.message}</div>`;
+  }
+};
+
+// Tüm tabloları CSV olarak indir (sırayla)
+window.downloadAllCSV = async function() {
+  const alertEl = document.getElementById('backup-alert');
+  alertEl.innerHTML = '<div class="alert alert-success"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Tüm tablolar hazırlanıyor...</div>';
+
+  try {
+    const timestamp = new Date().toISOString().slice(0,10);
+    for (const [table, label] of Object.entries(TABLES)) {
+      const data = await fetchAllRows(table);
+      if (!data.length) continue;
+      const csv = jsonToCSV(data);
+      await sleep(300); // Tarayıcının her dosyayı işlemesi için kısa bekleme
+      triggerDownload(csv, `nikfer-${label}-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+    }
+    updateLastBackupInfo('Tüm tablolar', 'CSV', new Date());
+    alertEl.innerHTML = '<div class="alert alert-success">✅ Tüm dosyalar indirildi!</div>';
+    setTimeout(() => alertEl.innerHTML = '', 4000);
+
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Hata: ${e.message}</div>`;
+  }
+};
+
+// JSON → CSV dönüştürücü
+function jsonToCSV(data) {
+  if (!data.length) return '';
+
+  // Tüm kolonları topla
+  const allKeys = [...new Set(data.flatMap(row => Object.keys(row)))];
+
+  // Başlık satırı
+  const header = allKeys.map(k => `"${k}"`).join(',');
+
+  // Veri satırları
+  const rows = data.map(row =>
+    allKeys.map(key => {
+      const val = row[key];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+      const str = String(val);
+      // Özel karakter içeriyorsa tırnak içine al
+      if (str.includes(',') || str.includes('"') || str.includes('
+') || str.includes('
+')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }).join(',')
+  );
+
+  // BOM ekle — Excel Türkçe karakter desteği için
+  return '﻿' + [header, ...rows].join('
+');
+}
+
+// Dosya indirme tetikleyici
+function triggerDownload(content, filename, mimeType) {
+  const blobContent = mimeType.includes('csv')
+    ? new Blob([new Uint8Array([0xEF,0xBB,0xBF]), content], { type: mimeType })
+    : new Blob([content], { type: mimeType });
+  const blob = blobContent;
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Son yedek bilgisini güncelle
+function updateLastBackupInfo(target, format, date) {
+  const el = document.getElementById('last-backup-info');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px">
+      <i class="ti ti-circle-check" style="color:var(--success);font-size:20px"></i>
+      <div>
+        <div style="font-weight:600;color:var(--text)">${target} — ${format}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${date.toLocaleString('tr-TR')}</div>
+      </div>
+    </div>`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 window.loadComments = async function(filter = 'all') {
   const tbody = document.getElementById('comments-tbody');
@@ -1779,197 +2256,7 @@ window.closeModal = id => {
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
 });
-
-// ── YEDEKLEME ────────────────────────────────────────────────
-
-const BACKUP_TABLES = [
-  { key: 'sections',       label: 'Bölümler',        query: () => supabase.from('sections').select('*').order('sort_order') },
-  { key: 'content_blocks', label: 'İçerik Blokları', query: () => supabase.from('content_blocks').select('*').order('sort_order') },
-  { key: 'comments',       label: 'Yorumlar',         query: () => supabase.from('comments').select('*').order('created_at') },
-  { key: 'audio_files',    label: 'Ses Dosyaları',    query: () => supabase.from('audio_files').select('*').order('sort_order') },
-  { key: 'gallery',        label: 'Galeri',           query: () => supabase.from('gallery').select('*').order('sort_order') },
-  { key: 'links',          label: 'Linkler',          query: () => supabase.from('links').select('*').order('sort_order') },
-  { key: 'site_settings',  label: 'Site Ayarları',    query: () => supabase.from('site_settings').select('*') },
-];
-
-async function loadBackupStats() {
-  const tbody = document.getElementById('backup-tbody');
-  tbody.innerHTML = '<tr><td colspan="4" class="loading-row"><span class="spinner"></span></td></tr>';
-  const rows = await Promise.all(
-    BACKUP_TABLES.map(async t => {
-      const { count, error } = await supabase.from(t.key).select('*', { count: 'exact', head: true });
-      return { ...t, count: error ? '⚠️' : (count ?? 0), error };
-    })
-  );
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td style="font-weight:600">${r.label}</td>
-      <td>${r.error ? '<span style="color:var(--danger)">Erişim hatası</span>' : r.count + ' kayıt'}</td>
-      <td>${r.error ? '<span class="badge badge-red">Hata</span>' : '<span class="badge badge-green">Hazır</span>'}</td>
-      <td>
-        <button class="btn btn-ghost btn-sm" onclick="backupSingleTable('${r.key}','${r.label}')">
-          <i class="ti ti-download"></i> İndir
-        </button>
-      </td>
-    </tr>`).join('');
-}
-
-function backupLog(msg, type = 'info') {
-  const log   = document.getElementById('backup-log');
-  const color = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--danger)' : 'var(--text-muted)';
-  const icon  = type === 'ok' ? '✓' : type === 'err' ? '✗' : '›';
-  log.innerHTML += `<div style="color:${color}">${icon} ${new Date().toLocaleTimeString('tr-TR')} — ${msg}</div>`;
-  log.scrollTop  = log.scrollHeight;
-}
-
-function downloadJSON(data, filename) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-window.backupSingleTable = async function(tableKey, label) {
-  backupLog(`${label} indiriliyor...`);
-  const t = BACKUP_TABLES.find(t => t.key === tableKey);
-  const { data, error } = await t.query();
-  if (error) { backupLog(`${label} hatası: ${error.message}`, 'err'); return; }
-  const date = new Date().toISOString().slice(0, 10);
-  downloadJSON({ table: tableKey, exported_at: new Date().toISOString(), count: data.length, data },
-    `nikfer-${tableKey}-${date}.json`);
-  backupLog(`${label}: ${data.length} kayıt indirildi.`, 'ok');
-};
-
-window.runBackup = async function() {
-  document.getElementById('backup-log').innerHTML = '';
-  backupLog('Tam yedekleme başlatılıyor...');
-  const backup = { exported_at: new Date().toISOString(), version: '1.0', tables: {} };
-  let totalRecords = 0;
-  let hasError     = false;
-
-  for (const t of BACKUP_TABLES) {
-    backupLog(`${t.label} çekiliyor...`);
-    const { data, error } = await t.query();
-    if (error) { backupLog(`${t.label} hatası: ${error.message}`, 'err'); hasError = true; continue; }
-    backup.tables[t.key] = data;
-    totalRecords += data.length;
-    backupLog(`${t.label}: ${data.length} kayıt ✓`, 'ok');
-  }
-
-  const date     = new Date().toISOString().slice(0, 10);
-  const filename = `nikfer-tam-yedek-${date}.json`;
-  downloadJSON(backup, filename);
-  backupLog('─'.repeat(40));
-  backupLog(
-    hasError
-      ? `Yedek tamamlandı (bazı hata). Toplam: ${totalRecords} kayıt → ${filename}`
-      : `Yedek başarıyla tamamlandı! Toplam: ${totalRecords} kayıt → ${filename}`,
-    hasError ? 'err' : 'ok'
-  );
-  loadBackupStats();
-};
-
-// Yedek yükleme sırası — bağımlılık sırasına göre
-const RESTORE_ORDER = [
-  'sections',
-  'content_blocks',
-  'audio_files',
-  'links',
-  'gallery',
-  'comments',
-  'site_settings',
-];
-
-function restoreLog(msg, type = 'info') {
-  const log   = document.getElementById('restore-log');
-  const color = type === 'ok' ? 'var(--success)' : type === 'err' ? 'var(--danger)' : 'var(--text-muted)';
-  const icon  = type === 'ok' ? '✓' : type === 'err' ? '✗' : '›';
-  log.innerHTML += `<div style="color:${color}">${icon} ${new Date().toLocaleTimeString('tr-TR')} — ${msg}</div>`;
-  log.scrollTop  = log.scrollHeight;
-}
-
-window.runRestore = async function() {
-  const fileInput = document.getElementById('restore-file');
-  const file      = fileInput.files[0];
-  if (!file) { alert('Lütfen bir JSON yedek dosyası seçin.'); return; }
-
-  if (!confirm('Bu işlem mevcut verilerin üzerine yazacak. Devam etmek istiyor musunuz?')) return;
-
-  document.getElementById('restore-log').innerHTML = '';
-  restoreLog('Dosya okunuyor...');
-
-  let backup;
-  try {
-    const text = await file.text();
-    backup = JSON.parse(text);
-  } catch(e) {
-    restoreLog('Dosya okunamadı: ' + e.message, 'err');
-    return;
-  }
-
-  // Tek tablo yedeği mi, tam yedek mi?
-  const tables = backup.tables || (backup.table ? { [backup.table]: backup.data } : null);
-  if (!tables) { restoreLog('Geçersiz yedek formatı.', 'err'); return; }
-
-  restoreLog(`Yedek tarihi: ${backup.exported_at || 'Bilinmiyor'}`);
-
-  let totalInserted = 0;
-  let hasError      = false;
-
-  for (const key of RESTORE_ORDER) {
-    const rows = tables[key];
-    if (!rows || !rows.length) continue;
-
-    const t = BACKUP_TABLES.find(t => t.key === key);
-    restoreLog(`${t?.label || key} yükleniyor (${rows.length} kayıt)...`);
-
-    // Önce mevcut verileri temizle
-    const { error: delErr } = await supabase.from(key).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (delErr) {
-      // site_settings için id kolonu yok, key ile sil
-      if (key === 'site_settings') {
-        await supabase.from(key).delete().neq('key', '____never____');
-      } else {
-        restoreLog(`${t?.label || key} temizlenemedi: ${delErr.message}`, 'err');
-        hasError = true;
-        continue;
-      }
-    }
-
-    // Toplu insert (50'şer)
-    const chunkSize = 50;
-    let inserted    = 0;
-    for (let i = 0; i < rows.length; i += chunkSize) {
-      const chunk = rows.slice(i, i + chunkSize);
-      const { error: insErr } = await supabase.from(key).insert(chunk);
-      if (insErr) {
-        restoreLog(`${t?.label || key} yükleme hatası: ${insErr.message}`, 'err');
-        hasError = true;
-        break;
-      }
-      inserted += chunk.length;
-    }
-
-    if (!hasError || inserted > 0) {
-      totalInserted += inserted;
-      restoreLog(`${t?.label || key}: ${inserted} kayıt yüklendi ✓`, 'ok');
-    }
-  }
-
-  restoreLog('─'.repeat(40));
-  restoreLog(
-    hasError
-      ? `Yükleme tamamlandı (bazı hatalar). Toplam: ${totalInserted} kayıt yüklendi.`
-      : `Yükleme başarıyla tamamlandı! Toplam: ${totalInserted} kayıt yüklendi.`,
-    hasError ? 'err' : 'ok'
-  );
-
-  loadBackupStats();
-  fileInput.value = '';
-};
 </script>
+<div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(44,26,10,.9);color:#FFF;padding:9px 18px;border-radius:20px;font-size:12px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none" class="toast"></div>
 </body>
 </html>
