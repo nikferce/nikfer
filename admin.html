@@ -2134,33 +2134,24 @@ window.downloadAllCSV = async function() {
 // JSON → CSV dönüştürücü
 function jsonToCSV(data) {
   if (!data.length) return '';
-
-  // Tüm kolonları topla
   const allKeys = [...new Set(data.flatMap(row => Object.keys(row)))];
-
-  // Başlık satırı
-  const header = allKeys.map(k => `"${k}"`).join(',');
-
-  // Veri satırları
-  const rows = data.map(row =>
+  const header  = allKeys.map(k => '"' + k + '"').join(',');
+  const rows    = data.map(row =>
     allKeys.map(key => {
       const val = row[key];
       if (val === null || val === undefined) return '';
-      if (typeof val === 'object') return `"${JSON.stringify(val).replace(/"/g, '""')}"`;
+      if (typeof val === 'object') {
+        const s = JSON.stringify(val).replace(/"/g, '""');
+        return '"' + s + '"';
+      }
       const str = String(val);
-      // Özel karakter içeriyorsa tırnak içine al
-      if (str.includes(',') || str.includes('"') || str.includes('
-') || str.includes('
-')) {
-        return `"${str.replace(/"/g, '""')}"`;
+      if (str.includes(',') || str.includes('"') || str.indexOf('\n') >= 0 || str.indexOf('\r') >= 0) {
+        return '"' + str.replace(/"/g, '""') + '"';
       }
       return str;
     }).join(',')
   );
-
-  // BOM ekle — Excel Türkçe karakter desteği için
-  return '﻿' + [header, ...rows].join('
-');
+  return [header, ...rows].join('\r\n');
 }
 
 // Dosya indirme tetikleyici
