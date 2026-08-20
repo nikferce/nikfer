@@ -350,7 +350,6 @@ textarea.form-input{resize:none;min-height:72px}
     <div id="gunun-bilmecesi-wrap"></div>
   </section>
 
-
   <!-- TARİH -->
   <section id="page-tarih" class="page">
     <div class="sec-title">Tarih & Hafıza</div>
@@ -363,21 +362,19 @@ textarea.form-input{resize:none;min-height:72px}
     </div>
   </section>
 
-<!-- VEFAT -->
+  <!-- VEFAT -->
   <section id="page-vefat" class="page">
-    <!-- Arama & Filtre -->
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
       <div style="font-size:14px;font-weight:600;color:var(--primary);margin-bottom:10px">
         <i class="ti ti-candle" style="margin-right:6px"></i>Kaybettiklerimiz
       </div>
       <div class="search-wrap" style="margin-bottom:8px">
         <i class="ti ti-search"></i>
-        <input type="text" id="deceased-search" placeholder="İsim ara..."
-          oninput="searchDeceased()" style="width:100%">
+        <input type="text" id="deceased-search" placeholder="İsim ara..." oninput="searchDeceased()" style="width:100%">
       </div>
       <div style="display:flex;gap:8px">
         <select id="deceased-year" onchange="searchDeceased()"
-          style="flex:1;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;background:var(--bg-card);color:var(--text);outline:none">
+          style="flex:1;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;background:var(--bg-card);color:var(--text);outline:none;appearance:none">
           <option value="">Tüm Yıllar</option>
         </select>
         <button onclick="openSuggestModal()"
@@ -386,16 +383,8 @@ textarea.form-input{resize:none;min-height:72px}
         </button>
       </div>
     </div>
-
-    <!-- İstatistik -->
     <div id="deceased-stats" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;text-align:center"></div>
-
-    <!-- Liste -->
-    <div id="deceased-list">
-      <div class="loading"><div class="spinner"></div></div>
-    </div>
-
-    <!-- Daha fazla yükle -->
+    <div id="deceased-list"><div class="loading"><div class="spinner"></div></div></div>
     <div id="deceased-more" style="display:none;text-align:center;margin-top:12px">
       <button onclick="loadMoreDeceased()"
         style="background:none;border:1px solid var(--primary);color:var(--primary);border-radius:9px;padding:9px 24px;font-size:13px;font-weight:500;cursor:pointer">
@@ -403,6 +392,7 @@ textarea.form-input{resize:none;min-height:72px}
       </button>
     </div>
   </section>
+
   <!-- TOPLULUK -->
   <section id="page-topluluk" class="page">
     <div class="sec-title">Nikferli Sesi</div>
@@ -496,25 +486,26 @@ textarea.form-input{resize:none;min-height:72px}
       <button onclick="closeSuggestModal()" style="background:none;border:none;color:#FFF;font-size:20px;cursor:pointer"><i class="ti ti-x"></i></button>
     </div>
     <div style="padding:16px">
-      <div style="font-size:12px;color:var(--text-muted);background:rgba(139,69,19,.06);border-radius:8px;padding:10px;margin-bottom:14px">
-        Nikferli bir kişinin vefat kaydının eksik olduğunu düşünüyorsanız aşağıdaki formu doldurun. Admin inceledikten sonra yayınlanacak.
-      </div>
       <div id="suggest-alert"></div>
       <div style="margin-bottom:10px">
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Ad Soyad *</label>
-        <input id="sg-name" class="form-input" placeholder="Kişinin tam adı" style="width:100%">
+        <input id="sg-name" placeholder="Kişinin tam adı"
+          style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
       </div>
       <div style="margin-bottom:10px">
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Vefat Tarihi *</label>
-        <input id="sg-date" type="date" class="form-input" style="width:100%">
+        <input id="sg-date" type="date"
+          style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
       </div>
       <div style="margin-bottom:10px">
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Not / Açıklama</label>
-        <textarea id="sg-notes" class="form-input" rows="3" placeholder="Ek bilgi..." style="width:100%;resize:none"></textarea>
+        <textarea id="sg-notes" rows="3" placeholder="Ek bilgi..."
+          style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none"></textarea>
       </div>
       <div style="margin-bottom:14px">
         <label style="font-size:11px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">Bildiren (isteğe bağlı)</label>
-        <input id="sg-by" class="form-input" placeholder="Adınız" style="width:100%">
+        <input id="sg-by" placeholder="Adınız"
+          style="width:100%;border:1px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
       </div>
       <button onclick="submitSuggest()"
         style="background:var(--primary);color:#FFF;border:none;border-radius:9px;padding:10px;font-size:13px;font-weight:600;cursor:pointer;width:100%">
@@ -523,7 +514,6 @@ textarea.form-input{resize:none;min-height:72px}
     </div>
   </div>
 </div>
-
 
 <!-- LİGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightbox()">
@@ -1475,6 +1465,7 @@ document.addEventListener('keydown', e => {
   });
 })();
 
+// ── SHARE ─────────────────────────────────────────────────
 // ── VEFAT KAYITLARI ──────────────────────────────────────────
 let _deceasedLoaded = false;
 let _deceasedOffset = 0;
@@ -1489,11 +1480,15 @@ async function initDeceasedPage() {
   try {
     const years = await getDeceasedYears();
     const sel   = document.getElementById('deceased-year');
-    if (sel) {
-      sel.innerHTML = '<option value="">Tüm Yıllar</option>' +
-        years.map(y => `<option value="${y}">${y}</option>`).join('');
+    if (sel && years.length) {
+      // RPC sonucu {year, count} veya sadece yıl sayısı olabilir
+      const opts = years.map(y => {
+        if (typeof y === 'object') return `<option value="${y.year}">${y.year} (${y.count})</option>`;
+        return `<option value="${y}">${y}</option>`;
+      }).join('');
+      sel.innerHTML = '<option value="">Tüm Yıllar</option>' + opts;
     }
-  } catch(e) {}
+  } catch(e) { console.error('Yıl yükleme hatası:', e); }
   await loadDeceasedList(true);
 }
 
@@ -1511,15 +1506,18 @@ async function loadDeceasedList(reset = false) {
       offset: _deceasedOffset,
     });
     _deceasedTotal = count;
+
     const statsEl = document.getElementById('deceased-stats');
     if (statsEl) {
       statsEl.textContent = (_deceasedSearch || _deceasedYear)
         ? `${count} kayıt bulundu`
         : `Toplam ${count} kayıt`;
     }
+
     const listEl = document.getElementById('deceased-list');
     const moreEl = document.getElementById('deceased-more');
     if (reset) listEl.innerHTML = '';
+
     if (!data.length && reset) {
       listEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:13px">
         <i class="ti ti-search" style="font-size:28px;display:block;margin-bottom:8px;opacity:.4"></i>
@@ -1527,6 +1525,7 @@ async function loadDeceasedList(reset = false) {
       if (moreEl) moreEl.style.display = 'none';
       return;
     }
+
     // Yıla göre grupla
     const grouped = {};
     data.forEach(d => {
@@ -1534,30 +1533,54 @@ async function loadDeceasedList(reset = false) {
       if (!grouped[yr]) grouped[yr] = [];
       grouped[yr].push(d);
     });
+
     let html = '';
     Object.entries(grouped).sort(([a],[b]) => b - a).forEach(([yr, items]) => {
-      html += `<div style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 6px;padding-left:2px">${yr} · ${items.length} kişi</div>`;
+      html += `<div style="font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;
+        letter-spacing:.8px;margin:14px 0 6px;padding-left:2px">${yr} · ${items.length} kişi</div>`;
       items.forEach(d => {
         const dd = d.death_date ? new Date(d.death_date).toLocaleDateString('tr-TR') : '—';
         const fi = d.funeral_date
-          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px"><i class="ti ti-clock" style="font-size:11px;margin-right:3px"></i>Cenaze: ${new Date(d.funeral_date).toLocaleDateString('tr-TR')}${d.funeral_time ? ' · '+d.funeral_time : ''}${d.funeral_place ? ' · '+d.funeral_place : ''}</div>`
-          : '';
+          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              <i class="ti ti-clock" style="font-size:11px;margin-right:3px"></i>
+              Cenaze: ${new Date(d.funeral_date).toLocaleDateString('tr-TR')}
+              ${d.funeral_time  ? ' · ' + d.funeral_time  : ''}
+              ${d.funeral_place ? ' · ' + d.funeral_place : ''}
+             </div>` : '';
         const bi = d.burial_place
-          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:1px"><i class="ti ti-map-pin" style="font-size:11px;margin-right:3px"></i>${d.burial_place}</div>`
-          : '';
+          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:1px">
+              <i class="ti ti-map-pin" style="font-size:11px;margin-right:3px"></i>${d.burial_place}
+             </div>` : '';
         const ni = d.notes
-          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">${d.notes}</div>`
-          : '';
-        html += `<div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4">${d.full_name}</div>
-          <div style="font-size:11px;color:#8B1A1A;font-weight:500;margin-top:3px"><i class="ti ti-candle" style="font-size:11px;margin-right:3px"></i>${dd}</div>
-          ${fi}${bi}${ni}
+          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">${d.notes}</div>` : '';
+        const photoHtml = d.photo_url
+          ? `<div style="flex-shrink:0;cursor:pointer" onclick="openLightbox('${d.photo_url}','${d.full_name.replace(/'/g,'')}')">
+               <img src="${d.photo_url}"
+                 style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
+             </div>`
+          : `<div style="width:48px;height:48px;border-radius:50%;background:rgba(139,69,19,.08);
+               display:flex;align-items:center;justify-content:center;flex-shrink:0">
+               <i class="ti ti-user" style="color:var(--text-muted);font-size:22px"></i>
+             </div>`;
+
+        html += `<div style="background:var(--bg-card);border:1px solid var(--border);
+          border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start">
+          ${photoHtml}
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4">${d.full_name}</div>
+            <div style="font-size:11px;color:#8B1A1A;font-weight:500;margin-top:3px">
+              <i class="ti ti-candle" style="font-size:11px;margin-right:3px"></i>${dd}
+            </div>
+            ${fi}${bi}${ni}
+          </div>
         </div>`;
       });
     });
+
     listEl.innerHTML += html;
     _deceasedOffset += data.length;
     if (moreEl) moreEl.style.display = (_deceasedOffset < _deceasedTotal) ? 'block' : 'none';
+
   } catch(e) {
     document.getElementById('deceased-list').innerHTML =
       `<div class="error-msg">Yüklenemedi: ${e.message}</div>`;
@@ -1584,15 +1607,28 @@ window.closeSuggestModal = function() {
 };
 
 window.submitSuggest = async function() {
-  const name  = document.getElementById('sg-name').value.trim();
-  const date  = document.getElementById('sg-date').value;
-  const notes = document.getElementById('sg-notes').value.trim();
-  const by    = document.getElementById('sg-by').value.trim();
+  const name    = document.getElementById('sg-name').value.trim();
+  const date    = document.getElementById('sg-date').value;
+  const notes   = document.getElementById('sg-notes').value.trim();
+  const by      = document.getElementById('sg-by').value.trim();
   const alertEl = document.getElementById('suggest-alert');
-  if (!name) { alertEl.innerHTML = '<div style="background:rgba(200,50,50,.1);border-radius:8px;padding:8px;font-size:12px;color:#8B1A1A;margin-bottom:8px">Ad Soyad zorunludur.</div>'; return; }
-  if (!date) { alertEl.innerHTML = '<div style="background:rgba(200,50,50,.1);border-radius:8px;padding:8px;font-size:12px;color:#8B1A1A;margin-bottom:8px">Vefat tarihi zorunludur.</div>'; return; }
+  alertEl.innerHTML = '';
+
+  if (!name) {
+    alertEl.innerHTML = '<div style="background:rgba(200,50,50,.1);border-radius:8px;padding:8px;font-size:12px;color:#8B1A1A;margin-bottom:8px">Ad Soyad zorunludur.</div>';
+    return;
+  }
+  if (!date) {
+    alertEl.innerHTML = '<div style="background:rgba(200,50,50,.1);border-radius:8px;padding:8px;font-size:12px;color:#8B1A1A;margin-bottom:8px">Vefat tarihi zorunludur.</div>';
+    return;
+  }
   try {
-    await suggestDeceased({ full_name: name, death_date: date, notes: notes||null, suggested_by: by||null, is_published: false, is_verified: false });
+    await suggestDeceased({
+      full_name:    name,
+      death_date:   date,
+      notes:        notes || null,
+      suggested_by: by   || null,
+    });
     alertEl.innerHTML = '<div style="background:rgba(39,174,96,.1);border-radius:8px;padding:8px;font-size:12px;color:#1E8449;margin-bottom:8px">✅ Bildiriminiz alındı. Admin inceledikten sonra yayınlanacak.</div>';
     ['sg-name','sg-date','sg-notes','sg-by'].forEach(id => document.getElementById(id).value = '');
     setTimeout(() => closeSuggestModal(), 2000);
@@ -1601,7 +1637,6 @@ window.submitSuggest = async function() {
   }
 };
 
-// ── SHARE ─────────────────────────────────────────────────
 window.shareApp = function() {
   const data = { title: 'Nikfer Belleği', text: 'Nikfer kasabasının dijital bellek arşivi', url: window.location.href };
   if (navigator.share) navigator.share(data);
