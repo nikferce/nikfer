@@ -1368,13 +1368,16 @@ function handleDeepLink() {
 let _lbImages  = [];   // {url, caption} dizisi
 let _lbIndex   = 0;    // aktif fotoğraf indexi
 
-// Tek fotoğraf aç — tüm galeriyi yükler, seçilen fotoğraftan başlar
-window.openLightbox = function(src, caption) {
-  if (window._currentGallery && window._currentGallery.length) {
+// Tek fotoğraf aç
+// solo=true → galeri bağlamını yok say, sadece bu fotoğrafı göster (vefat vb.)
+window.openLightbox = function(src, caption, solo = false) {
+  if (!solo && window._currentGallery && window._currentGallery.length) {
+    // Bölüm galerisi bağlamında aç — sağ/sol geçiş aktif
     _lbImages = window._currentGallery;
     const idx = _lbImages.findIndex(i => i.url === src);
     _lbIndex  = idx >= 0 ? idx : 0;
   } else {
+    // Tek fotoğraf — önceki galeri bağlamını temizle
     _lbImages = [{ url: src, caption: caption || '' }];
     _lbIndex  = 0;
   }
@@ -1554,7 +1557,7 @@ async function loadDeceasedList(reset = false) {
         const ni = d.notes
           ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">${d.notes}</div>` : '';
         const photoHtml = d.photo_url
-          ? `<div style="flex-shrink:0;cursor:pointer" onclick="openLightbox('${d.photo_url}','${d.full_name.replace(/'/g,'')}')">
+          ? `<div style="flex-shrink:0;cursor:pointer" onclick="openLightbox('${d.photo_url}','${d.full_name.replace(/'/g,'')}',true)">
                <img src="${d.photo_url}"
                  style="width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">
              </div>`
