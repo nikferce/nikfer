@@ -1626,10 +1626,10 @@ window.searchDeceased = function() {
   _deceasedSearch = document.getElementById('deceased-search').value.trim();
   _deceasedYear   = document.getElementById('deceased-year').value;
 
-  // Yıl seçilince export butonu görünür
+  // Yıl seçilince export butonu — sadece ayar aktifse göster
   const exportBtn = document.getElementById('deceased-export-btn');
   if (exportBtn) {
-    exportBtn.style.display = _deceasedYear ? 'flex' : 'none';
+    exportBtn.style.display = (_deceasedYear && _downloadEnabled) ? 'flex' : 'none';
   }
 
   clearTimeout(_searchTimer);
@@ -1680,7 +1680,11 @@ window.submitSuggest = async function() {
 
 // Vefat listesi site export — seçili yıl veya tüm liste
 window.exportDeceasedSite = async function() {
-  // Yıl seçilmemişse indir
+  // Ayar veya yıl kontrolü
+  if (!_downloadEnabled) {
+    showToast('İndirme özelliği şu an aktif değil.');
+    return;
+  }
   if (!_deceasedYear) {
     showToast('Lütfen önce bir yıl seçin.');
     return;
