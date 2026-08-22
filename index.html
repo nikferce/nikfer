@@ -590,13 +590,15 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-let currentSlug   = null;
-let currentDetail = null;
+let currentSlug      = null;
+let currentDetail    = null;
+let _downloadEnabled = false; // site_settings'den gelir
 
 // ── INIT ───────────────────────────────────────────────────
 async function init() {
   await loadSectionsGrid();
   loadStats();
+  loadSiteFlags();
   loadFeaturedSections();
   loadRecentComments();
   await loadComments();
@@ -605,6 +607,15 @@ async function init() {
   loadPageGrids();
   loadTarihPreviewCards();
   handleDeepLink();
+}
+
+async function loadSiteFlags() {
+  try {
+    const settings = await getSiteSettings();
+    _downloadEnabled = settings['deceased_download_enabled']?.value === 'true';
+  } catch(e) {
+    _downloadEnabled = false;
+  }
 }
 
 // ── SECTIONS GRID ──────────────────────────────────────────
