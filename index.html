@@ -385,8 +385,9 @@ textarea.form-input{resize:none;min-height:72px}
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <div id="deceased-stats" style="font-size:12px;color:var(--text-muted)"></div>
-      <button onclick="exportDeceasedSite()"
-        style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">
+      <button id="deceased-export-btn" onclick="exportDeceasedSite()"
+        style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;display:none;align-items:center;gap:4px"
+        title="Seçili yılı CSV olarak indir">
         <i class="ti ti-download" style="font-size:13px"></i> İndir
       </button>
     </div>
@@ -1624,6 +1625,13 @@ let _searchTimer = null;
 window.searchDeceased = function() {
   _deceasedSearch = document.getElementById('deceased-search').value.trim();
   _deceasedYear   = document.getElementById('deceased-year').value;
+
+  // Yıl seçilince export butonu görünür
+  const exportBtn = document.getElementById('deceased-export-btn');
+  if (exportBtn) {
+    exportBtn.style.display = _deceasedYear ? 'flex' : 'none';
+  }
+
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(() => loadDeceasedList(true), 350);
 };
@@ -1672,6 +1680,11 @@ window.submitSuggest = async function() {
 
 // Vefat listesi site export — seçili yıl veya tüm liste
 window.exportDeceasedSite = async function() {
+  // Yıl seçilmemişse indir
+  if (!_deceasedYear) {
+    showToast('Lütfen önce bir yıl seçin.');
+    return;
+  }
   showToast('Liste hazırlanıyor...');
   try {
     const { data } = await getDeceased({
@@ -1681,7 +1694,7 @@ window.exportDeceasedSite = async function() {
       offset: 0,
     });
 
-    if (!data || !data.length) { showToast('İndirilecek kayıt bulunamadı.'); return; }
+    if (!data || !data.length) { showToast('Bu yıla ait kayıt bulunamadı.'); return; }
 
     // CSV oluştur
     const headers = ['Ad Soyad','Vefat Tarihi','Cenaze Tarihi','Cenaze Saati','Cenaze Yeri','Defin Yeri','Not'];
