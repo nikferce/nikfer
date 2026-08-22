@@ -413,6 +413,18 @@ select.form-control{cursor:pointer}
             <div class="form-hint">Ana sayfada "Kayıtlı Nüfus" olarak gösterilir</div>
           </div>
 
+          <!-- Vefat indirme butonu -->
+          <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+            <label class="form-label">Vefat Listesi İndirme Butonu</label>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                <input type="checkbox" id="setting-download-enabled" onchange="saveDownloadSetting(this.checked)">
+                <span style="font-size:13px;color:var(--text)">Ziyaretçiler yıl bazlı vefat listesini indirebilsin</span>
+              </label>
+            </div>
+            <div class="form-hint">Kapalıysa İndir butonu sitede görünmez, F12 ile de çalışmaz.</div>
+          </div>
+
           <!-- Otomatik hesaplanan -->
           <div style="background:rgba(139,69,19,.05);border-radius:10px;padding:14px;margin-top:8px">
             <div style="font-size:12px;font-weight:600;color:var(--primary);margin-bottom:10px">
@@ -2127,6 +2139,46 @@ window.deleteDeceasedUI = async function(id) {
   } catch(e) { alert('Hata: ' + e.message); }
 };
 
+// ── ORTAK YARDIMCI FONKSİYONLAR ─────────────────────────────
+
+function jsonToCSV(data) {
+  if (!data || !data.length) return '';
+  const allKeys = [...new Set(data.flatMap(row => Object.keys(row)))];
+  const header  = allKeys.map(k => '"' + String(k).replace(/"/g,'""') + '"').join(',');
+  const rows    = data.map(row =>
+    allKeys.map(key => {
+      const val = row[key];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'object') {
+        return '"' + JSON.stringify(val).replace(/"/g,'""') + '"';
+      }
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.indexOf('\n') >= 0) {
+        return '"' + str.replace(/"/g,'""') + '"';
+      }
+      return str;
+    }).join(',')
+  );
+  return [header, ...rows].join('\r\n');
+}
+
+function triggerDownload(content, filename, mimeType) {
+  const blobParts = mimeType.includes('csv')
+    ? [new Uint8Array([0xEF,0xBB,0xBF]), content]
+    : [content];
+  const blob = new Blob(blobParts, { type: mimeType });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 // ── AYARLAR ──────────────────────────────────────────────────
 async function loadSettings() {
   try {
@@ -2158,6 +2210,21 @@ async function loadSettings() {
       `<div class="alert alert-danger">Yüklenemedi: ${e.message}</div>`;
   }
 }
+
+window.saveDownloadSetting = async function(checked) {
+  const alertEl = document.getElementById('settings-alert');
+  try {
+    await updateSiteSetting('deceased_download_enabled', checked ? 'true' : 'false');
+    alertEl.innerHTML = `<div class="alert alert-success">
+      ✅ İndirme butonu ${checked ? 'aktif edildi' : 'devre dışı bırakıldı'}.
+    </div>`;
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+    // Hata olursa checkbox'ı geri al
+    document.getElementById('setting-download-enabled').checked = !checked;
+  }
+};
 
 window.saveSettingUI = async function(key, value) {
   const alertEl = document.getElementById('settings-alert');
