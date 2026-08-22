@@ -446,7 +446,17 @@ select.form-control{cursor:pointer}
     <div id="panel-deceased" class="panel">
       <div class="panel-header">
         <div><div class="panel-title">Vefat Kayıtları</div><div class="panel-subtitle">Kayıtları yönetin, önerileri onaylayın</div></div>
-        <button class="btn btn-primary" onclick="openDeceasedModal()"><i class="ti ti-plus"></i> Yeni Kayıt</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="exportDeceasedCSV()" title="CSV olarak indir">
+            <i class="ti ti-file-type-csv"></i> CSV
+          </button>
+          <button class="btn btn-ghost" onclick="exportDeceasedJSON()" title="JSON olarak indir">
+            <i class="ti ti-file-type-json"></i> JSON
+          </button>
+          <button class="btn btn-primary" onclick="openDeceasedModal()">
+            <i class="ti ti-plus"></i> Yeni Kayıt
+          </button>
+        </div>
       </div>
       <div id="deceased-admin-alert"></div>
       <div style="display:flex;gap:8px;margin-bottom:14px">
@@ -1889,11 +1899,12 @@ async function renderDeceasedTable() {
       const photoHtml = d.photo_url
         ? `<img src="${d.photo_url}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--border)">`
         : `<div style="width:40px;height:40px;border-radius:50%;background:rgba(139,69,19,.1);display:flex;align-items:center;justify-content:center"><i class="ti ti-user" style="color:var(--text-muted);font-size:18px"></i></div>`;
+      const escHtml = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
       return `<tr>
         <td>${photoHtml}</td>
         <td>
-          <div style="font-size:13px;font-weight:500">${d.full_name}</div>
-          ${d.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${d.notes.slice(0,60)}${d.notes.length>60?'…':''}</div>` : ''}
+          <div style="font-size:13px;font-weight:500">${escHtml(d.full_name)}</div>
+          ${d.notes ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${escHtml(d.notes).slice(0,60)}${d.notes.length>60?'…':''}</div>` : ''}
         </td>
         <td style="font-size:12px;color:#8B1A1A;font-weight:500;white-space:nowrap">${dd}</td>
         <td>
@@ -2032,6 +2043,73 @@ window.removeDeceasedPhotoUI = async function() {
   document.getElementById('dm-photo-file').value    = '';
   document.getElementById('dm-photo-img').src       = '';
   document.getElementById('dm-photo-preview').style.display = 'none';
+};
+
+// Vefat — CSV export
+window.exportDeceasedCSV = async function() {
+  const alertEl = document.getElementById('deceased-admin-alert');
+  alertEl.innerHTML = '<div class="alert alert-success"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Hazırlanıyor...</div>';
+  try {
+    // Tüm kayıtları çek (sayfalama yok)
+    let allData = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from('deceased')
+        .select('full_name,death_date,funeral_date,funeral_time,funeral_place,burial_place,notes,is_published,added_date,created_at')
+        .order('death_date', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+
+    const csv       = jsonToCSV(allData);
+    const timestamp = new Date().toISOString().slice(0,10);
+    triggerDownload(csv, `nikfer-vefat-${timestamp}.csv`, 'text/csv;charset=utf-8;');
+    alertEl.innerHTML = `<div class="alert alert-success">✅ ${allData.length} kayıt indirildi.</div>`;
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Hata: ${e.message}</div>`;
+  }
+};
+
+// Vefat — JSON export
+window.exportDeceasedJSON = async function() {
+  const alertEl = document.getElementById('deceased-admin-alert');
+  alertEl.innerHTML = '<div class="alert alert-success"><span class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></span>Hazırlanıyor...</div>';
+  try {
+    let allData = [];
+    let from = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from('deceased')
+        .select('*')
+        .order('death_date', { ascending: false })
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+
+    const timestamp = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
+    const json = JSON.stringify({
+      deceased: allData,
+      _meta: { exported_at: new Date().toISOString(), count: allData.length }
+    }, null, 2);
+
+    triggerDownload(json, `nikfer-vefat-${timestamp}.json`, 'application/json');
+    alertEl.innerHTML = `<div class="alert alert-success">✅ ${allData.length} kayıt indirildi.</div>`;
+    setTimeout(() => alertEl.innerHTML = '', 3000);
+  } catch(e) {
+    alertEl.innerHTML = `<div class="alert alert-danger">Hata: ${e.message}</div>`;
+  }
 };
 
 window.verifyDeceasedUI = async function(id) {
