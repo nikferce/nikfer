@@ -383,7 +383,13 @@ textarea.form-input{resize:none;min-height:72px}
         </button>
       </div>
     </div>
-    <div id="deceased-stats" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;text-align:center"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div id="deceased-stats" style="font-size:12px;color:var(--text-muted)"></div>
+      <button onclick="exportDeceasedSite()"
+        style="background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:5px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px">
+        <i class="ti ti-download" style="font-size:13px"></i> İndir
+      </button>
+    </div>
     <div id="deceased-list"><div class="loading"><div class="spinner"></div></div></div>
     <div id="deceased-more" style="display:none;text-align:center;margin-top:12px">
       <button onclick="loadMoreDeceased()"
@@ -538,6 +544,17 @@ textarea.form-input{resize:none;min-height:72px}
 <div class="toast" id="toast"></div>
 
 <script type="module">
+// HTML escape — XSS önleme
+function esc(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
 import {
   getSections, getSectionWithContent,
   getFeaturedSections, getRecentComments,
@@ -716,6 +733,11 @@ async function loadSectionsGrid() {
 
 // ── OPEN SECTION ───────────────────────────────────────────
 window.openSection = async function(slug) {
+  // Cache boyutunu 10 bölümle sınırla — bellek birikimini önle
+  const cacheKeys = Object.keys(cache).filter(k => k !== 'sections');
+  if (cacheKeys.length > 10) {
+    delete cache[cacheKeys[0]];
+  }
   currentSlug = slug;
   const overlay = document.getElementById('detail-overlay');
   const body    = document.getElementById('detail-body');
@@ -749,6 +771,7 @@ window.closeDetail = function() {
   document.body.style.overflow = '';
   history.pushState({}, '', window.location.pathname);
   currentSlug = null;
+  window._currentGallery = []; // Galeri bağlamını temizle
 };
 
 window.closeDetailGoHome = function() {
@@ -1350,7 +1373,14 @@ window.showPage = function(id, btn) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
   btn.classList.add('active');
-  if (id === 'vefat' && !_deceasedLoaded) initDeceasedPage();
+  if (id === 'vefat') {
+    if (!_deceasedLoaded) {
+      initDeceasedPage();
+    } else {
+      // Sayfa daha önce açıldıysa yenile
+      loadDeceasedList(true);
+    }
+  }
 };
 
 // ── DEEP LINK ─────────────────────────────────────────────
@@ -1555,7 +1585,7 @@ async function loadDeceasedList(reset = false) {
               <i class="ti ti-map-pin" style="font-size:11px;margin-right:3px"></i>${d.burial_place}
              </div>` : '';
         const ni = d.notes
-          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">${d.notes}</div>` : '';
+          ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;font-style:italic">${esc(d.notes)}</div>` : '';
         const photoHtml = d.photo_url
           ? `<div style="flex-shrink:0;cursor:pointer" onclick="openLightbox('${d.photo_url}','${d.full_name.replace(/'/g,'')}',true)">
                <img src="${d.photo_url}"
@@ -1570,7 +1600,7 @@ async function loadDeceasedList(reset = false) {
           border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start">
           ${photoHtml}
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4">${d.full_name}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.4">${esc(d.full_name)}</div>
             <div style="font-size:11px;color:#8B1A1A;font-weight:500;margin-top:3px">
               <i class="ti ti-candle" style="font-size:11px;margin-right:3px"></i>${dd}
             </div>
@@ -1637,6 +1667,54 @@ window.submitSuggest = async function() {
     setTimeout(() => closeSuggestModal(), 2000);
   } catch(e) {
     alertEl.innerHTML = `<div style="background:rgba(200,50,50,.1);border-radius:8px;padding:8px;font-size:12px;color:#8B1A1A;margin-bottom:8px">Hata: ${e.message}</div>`;
+  }
+};
+
+// Vefat listesi site export — seçili yıl veya tüm liste
+window.exportDeceasedSite = async function() {
+  showToast('Liste hazırlanıyor...');
+  try {
+    const { data } = await getDeceased({
+      search: _deceasedSearch,
+      year:   _deceasedYear,
+      limit:  9999,
+      offset: 0,
+    });
+
+    if (!data || !data.length) { showToast('İndirilecek kayıt bulunamadı.'); return; }
+
+    // CSV oluştur
+    const headers = ['Ad Soyad','Vefat Tarihi','Cenaze Tarihi','Cenaze Saati','Cenaze Yeri','Defin Yeri','Not'];
+    const rows = data.map(d => [
+      d.full_name    || '',
+      d.death_date   || '',
+      d.funeral_date || '',
+      d.funeral_time || '',
+      d.funeral_place|| '',
+      d.burial_place || '',
+      d.notes        || '',
+    ].map(v => {
+      const s = String(v);
+      return (s.includes(',') || s.includes('"') || s.indexOf('\n') >= 0)
+        ? '"' + s.replace(/"/g, '""') + '"'
+        : s;
+    }).join(','));
+
+    const csv  = [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([new Uint8Array([0xEF,0xBB,0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const year = _deceasedYear || 'tumu';
+    a.href     = url;
+    a.download = `nikfer-vefat-${year}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    showToast(`${data.length} kayıt indirildi.`);
+  } catch(e) {
+    showToast('Hata: ' + e.message);
   }
 };
 
