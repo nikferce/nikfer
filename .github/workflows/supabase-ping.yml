@@ -2,7 +2,7 @@ name: Supabase Ping
 
 on:
   schedule:
-    - cron: '0 9 * * 1,4'  # Her Pazartesi 09:00 UTC
+    - cron: '0 9 * * 1,4'  # Her Pazartesi Perşembe 09:00 UTC
   workflow_dispatch:
 
 jobs:
